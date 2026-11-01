@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CCICAEPCC - Centro Cristiano ICAEP Ciudad Camelot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/feather-icons"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; scroll-behavior: smooth; }
+    [hidden] { display: none !important; }
+    html { overflow-x: clip; }
+    body { background-color: #f4f7f6; color: #2c3e50; overflow-x: hidden; }
+
+    /* HERO CON IMAGEN DE FONDO */
+    .hero-header { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; color: #ffffff; overflow: hidden; background-color: #0f2043; }
+    .hero-background-image { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; object-fit: cover; object-position: center 46%; }
+    .hero-image-overlay { position: absolute; inset: 0; width: 100%; height: 100%; background: linear-gradient(180deg, rgba(15, 32, 67, 0.45) 0%, rgba(15, 32, 67, 0.85) 100%); z-index: 2; }
+
+    /* NAVBAR PRINCIPAL */
+    .navbar-transparent { position: relative; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.2rem 4%; background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
+    .logo-container { display: flex; align-items: center; gap: 12px; }
+    .church-logo-img { height: 45px !important; width: auto !important; max-width: 150px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3)); }
+    .logo-text { color: #ffffff; font-size: 1.2rem; font-weight: 800; text-decoration: none; letter-spacing: 1px; }
+    .logo-text span { color: #60a5fa; }
+    
+    .nav-links { display: flex; list-style: none; gap: 18px; align-items: center; }
+    .nav-links li a { color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.5px; transition: all 0.3s; }
+    .nav-links li a:hover { opacity: 0.8; color: #93c5fd; }
+
+    .navbar-menu { display: flex; align-items: center; gap: 1.25rem; min-width: 0; }
+    .nav-actions { display: flex; align-items: center; gap: 12px; }
+    .nav-toggle { display: none; min-width: 44px; min-height: 44px; border: 1px solid rgba(255,255,255,.4); border-radius: 12px; background: rgba(255,255,255,.1); color: #fff; cursor: pointer; }
+    .btn-acc-public { background: #ffffff; color: #0f2043; font-weight: 700; font-size: 0.75rem; padding: 9px 18px; border-radius: 20px; text-decoration: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); transition: transform 0.2s; }
+    .btn-acc-public:hover { transform: translateY(-2px); }
+    .btn-acc-leaders { background: #2563eb; color: #ffffff; font-weight: 700; font-size: 0.75rem; padding: 9px 18px; border-radius: 20px; text-decoration: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.2s; }
+    .btn-acc-leaders:hover { transform: translateY(-2px); background: #1d4ed8; }
+
+    /* CONTENIDO HERO */
+    .hero-overlay-content { position: relative; z-index: 10; text-align: center; max-width: 950px; margin: auto; padding: 2rem; }
+    .hero-tag { letter-spacing: 3px; font-size: 0.75rem; font-weight: 800; color: #ffffff; background: rgba(255, 255, 255, 0.2); padding: 6px 18px; border-radius: 20px; margin-bottom: 20px; display: inline-block; }
+    .hero-title { font-size: 3.4rem; font-weight: 800; margin-bottom: 15px; line-height: 1.2; text-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .highlight-text { color: #93c5fd; }
+    .hero-subtitle { font-size: 1.25rem; color: #e2e8f0; margin-bottom: 30px; font-weight: 400; }
+    .hero-cta-group { display: flex; justify-content: center; gap: 15px; }
+    .btn-hero-primary { background-color: #ffffff; color: #0f2043; padding: 14px 32px; border-radius: 30px; font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); transition: all 0.3s; }
+    .btn-hero-primary:hover { background-color: #eff6ff; transform: translateY(-2px); }
+    .btn-hero-secondary { border: 2px solid #ffffff; color: #ffffff; padding: 14px 32px; border-radius: 30px; font-weight: 800; text-decoration: none; transition: all 0.3s; }
+    .btn-hero-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+
+    /* TICKER DE NOTICIAS */
+    .ticker-banner { background: #0f2043; color: #ffffff; padding: 14px 0; overflow: hidden; white-space: nowrap; border-bottom: 3px solid #3b82f6; }
+    .ticker-track { display: inline-block; animation: marquee 28s linear infinite; }
+    .ticker-track span { display: inline-block; padding: 0 40px; font-size: 0.88rem; font-weight: 700; letter-spacing: 0.5px; }
+    @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    .container { max-width: 1200px; margin: 4rem auto; padding: 0 20px; }
+    .public-section { margin-bottom: 6rem; }
+    .section-header { text-align: center; margin-bottom: 3rem; }
+    .section-badge { color: #2563eb; font-size: 0.8rem; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; }
+    .section-header h2 { font-size: 2.2rem; color: #0f2043; font-weight: 800; margin: 8px 0; }
+    .section-header p { color: #64748b; font-size: 1rem; }
+
+    /* SECCIÓN DE DESTINO EDITORIAL: MISIÓN, VISIÓN E HISTORIA (HOJA COMPLETA) */
+    .identity-page-section { background: #ffffff; border-radius: 24px; border: 1px solid #e2e8f0; padding: 60px 45px; margin-bottom: 6rem; box-shadow: 0 15px 40px rgba(0,0,0,0.04); }
+    .identity-story-list { display: grid; gap: 26px; margin-top: 35px; }
+    .identity-story { display: grid; grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.5fr); overflow: hidden; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 18px; }
+    .identity-story:nth-child(even) { grid-template-columns: minmax(0, 1.5fr) minmax(220px, 0.85fr); }
+    .identity-story:nth-child(even) .identity-story-image { order: 2; }
+    .identity-story-image { min-height: 250px; width: 100%; height: 100%; object-fit: cover; }
+    .identity-story-copy { padding: 34px; align-self: center; }
+    .identity-story-copy h3 { color: #0f2043; font-size: 1.5rem; font-weight: 800; margin-bottom: 14px; }
+    .identity-story-copy p { color: #475569; font-size: 1rem; line-height: 1.85; }
+
+    /* CARRUSEL INFINITO DE TESTIMONIOS */
+    .marquee-wrapper { overflow: hidden; position: relative; width: 100%; padding: 10px 0; }
+    .marquee-track { display: flex; gap: 24px; width: max-content; animation: scrollTestimonials 35s linear infinite; }
+    .marquee-track:hover { animation-play-state: paused; }
+    @keyframes scrollTestimonials { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 25px; }
+    .testimonial-card { width: min(340px, calc(100vw - 64px)); flex: 0 0 min(340px, calc(100vw - 64px)); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); transition: transform 0.3s; }
+    .testimonial-card:hover { transform: translateY(-5px); border-color: #3b82f6; }
+    .testimonial-image { display: block; width: 100%; height: 170px; object-fit: cover; border-radius: 10px; margin-bottom: 16px; background: #eff6ff; }
+    .testimonial-rating { display: inline-block; margin-bottom: 10px; color: #d97706; font-size: 1.1rem; letter-spacing: 3px; line-height: 1; }
+    .rating-fieldset { border: 0; min-width: 0; text-align: left; }
+    .rating-fieldset legend { margin-bottom: 5px; color: #fff; font-size: .88rem; font-weight: 700; }
+    .rating-choices { display: flex; flex-direction: row-reverse; justify-content: flex-end; width: fit-content; }
+    .rating-choices input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .feedback-form .rating-choices input { width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; }
+    .rating-choices label { display: grid; place-items: center; min-width: 44px; min-height: 44px; color: rgba(255,255,255,.55); font-size: 2rem; line-height: 1; cursor: pointer; }
+    .rating-choices label:hover, .rating-choices label:hover ~ label, .rating-choices input:checked ~ label { color: #fbbf24; }
+    .rating-choices input:focus-visible + label { outline: 3px solid #93c5fd; outline-offset: 2px; border-radius: 5px; }
+    .testimonial-empty, .events-empty { width: 100%; padding: 32px; border: 1px dashed #cbd5e1; border-radius: 14px; background: #fff; color: #64748b; text-align: center; }
+    .event-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 18px; margin: 0 0 56px; }
+    .event-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 18px rgba(15,32,67,.05); }
+    .event-card h3 { color: #0f2043; margin-bottom: 10px; }
+    .event-card p { color: #64748b; line-height: 1.6; margin-top: 8px; }
+    .user-profile { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+    .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0; }
+    .user-profile h4 { font-size: 1rem; color: #0f2043; font-weight: 700; }
+    .stars { color: #f59e0b; font-size: 0.95rem; }
+    .testimonial-text { color: #475569; font-size: 0.92rem; line-height: 1.65; }
+    .read-more-link { display: block; margin-top: 12px; font-size: 0.82rem; font-weight: 800; color: #2563eb; text-decoration: none; }
+
+    /* FORMULARIO DE RESEÑAS TRANSLÚCIDO */
+    .feedback-banner-bg { position: relative; border-radius: 20px; overflow: hidden; background: linear-gradient(rgba(15, 32, 67, 0.88), rgba(15, 32, 67, 0.88)), url('https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat; padding: 60px 30px; color: #ffffff; box-shadow: 0 12px 35px rgba(0,0,0,0.12); }
+    .feedback-card-translucent { background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 16px; padding: 35px; max-width: 680px; margin: 0 auto; text-align: center; }
+    .feedback-card-translucent h3 { color: #ffffff; font-weight: 800; margin-bottom: 10px; font-size: 1.5rem; }
+    .feedback-card-translucent p { color: #e2e8f0; margin-bottom: 22px; font-size: 0.95rem; }
+    textarea { width: 100%; padding: 14px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.08); color: #ffffff; border-radius: 10px; font-size: 0.95rem; outline: none; }
+    textarea::placeholder { color: #cbd5e1; }
+    .feedback-form { display: grid; gap: 12px; }
+    .feedback-form input { width: 100%; padding: 13px 14px; border: 1px solid rgba(255,255,255,.3); border-radius: 10px; background: rgba(255,255,255,.08); color: #fff; font-size: .95rem; }
+    .feedback-form input::placeholder { color: #cbd5e1; }
+    .feedback-form textarea { min-height: 140px; resize: vertical; }
+    .form-status { min-height: 1.4em; margin-top: 10px; font-weight: 700; }
+
+    /* TARJETAS DE OFRENDAS */
+    .ofrendas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 30px; }
+    .offering-card { background: #ffffff; border-radius: 18px; overflow: hidden; padding-bottom: 25px; text-align: center; border: 1px solid #e2e8f0; box-shadow: 0 6px 20px rgba(0,0,0,0.03); transition: transform 0.3s; }
+    .offering-card:hover { transform: translateY(-5px); }
+    .offering-img-wrapper { position: relative; height: 200px; overflow: hidden; }
+    .offering-img { width: 100%; height: 100%; object-fit: cover; }
+    .offering-badge { position: absolute; top: 14px; left: 14px; background: rgba(15, 32, 67, 0.9); color: #ffffff; font-size: 0.75rem; font-weight: 800; padding: 5px 14px; border-radius: 20px; letter-spacing: 0.5px; }
+    .offering-card h3 { color: #0f2043; margin: 18px 0 10px 0; font-weight: 800; font-size: 1.3rem; }
+    .offering-card p { color: #64748b; font-size: 0.92rem; padding: 0 25px; margin-bottom: 20px; line-height: 1.5; }
+    .btn-primary-peace { background: #0f2043; color: #ffffff; border: none; padding: 13px 28px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: background 0.3s; }
+    .btn-primary-peace:hover { background: #1e3a8a; }
+
+    /* PASTORES Y COBERTURA */
+    .pastors-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 30px; }
+    .pastor-box { background: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; padding: 40px 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.03); transition: all 0.3s; }
+    .pastor-box:hover { transform: translateY(-6px); border-color: #2563eb; box-shadow: 0 15px 35px rgba(37,99,235,0.1); }
+    .pastor-avatar-large { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid #eff6ff; margin-bottom: 18px; }
+    .pastor-box h3 { color: #0f2043; font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; }
+    .pastor-role { display: inline-block; color: #2563eb; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; margin-bottom: 14px; background: #eff6ff; padding: 4px 14px; border-radius: 20px; }
+    .pastor-box p { color: #64748b; font-size: 0.95rem; line-height: 1.6; }
+    .image-feature-grid, .ministry-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 20px; }
+    .image-feature-card { position: relative; min-height: 300px; display: flex; align-items: flex-end; overflow: hidden; border-radius: 18px; color: #fff; background: #0f2043; isolation: isolate; }
+    .image-feature-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; transition: transform .35s ease; }
+    .image-feature-card::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 10%, rgba(15,32,67,.9) 100%); }
+    .image-feature-card:hover img { transform: scale(1.04); }
+    .image-feature-copy { padding: 24px; }
+    .image-feature-copy h3 { margin-bottom: 8px; font-size: 1.3rem; }
+    .image-feature-copy p { color: #e2e8f0; line-height: 1.6; }
+    .ministry-gallery-card { display: grid; gap: 10px; padding: 22px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; }
+    .ministry-gallery-card h3 { color: #0f2043; }
+    .ministry-gallery-card p { color: #64748b; line-height: 1.55; }
+    .image-feature-section { position: relative; overflow: hidden; border-radius: 24px; padding: clamp(24px, 5vw, 56px); color: #fff; background: linear-gradient(110deg, rgba(15,32,67,.92), rgba(15,32,67,.65)), url('https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1800&q=85') center/cover; }
+    .teachings-bg { background-image: linear-gradient(110deg, rgba(15,32,67,.92), rgba(15,32,67,.58)), url('https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1800&q=85'); }
+    .prayer-bg { background-image: linear-gradient(110deg, rgba(15,32,67,.92), rgba(15,32,67,.58)), url('https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=1800&q=85'); }
+    .events-hero { padding: clamp(32px, 6vw, 64px) 20px; border-radius: 20px; background: linear-gradient(110deg, rgba(15,32,67,.9), rgba(15,32,67,.48)), url('https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1800&q=85') center/cover; }
+    .events-hero h2, .events-hero p { color: #fff; }
+    .image-feature-section .section-header h2, .image-feature-section .section-header p { color: #fff; }
+    .community-gallery { margin-top: 2rem; }
+    .ministry-gallery-card img { width: 100%; height: 150px; border-radius: 10px; object-fit: cover; background: #e2e8f0; }
+
+    /* SOFTWARE DE LIDERAZGO & PASTORAL (BACKEND / DASHBOARD INTERNO) */
+    #adminDashboard { background: #ffffff; border-radius: 20px; border: 2px solid #2563eb; padding: 45px; margin-top: 4rem; box-shadow: 0 20px 50px rgba(0,0,0,0.08); }
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 25px; margin-bottom: 30px; }
+    
+    .area-selector-bar { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 30px; border-bottom: 1px solid #e2e8f0; }
+    .btn-area { background: #f1f5f9; color: #475569; font-weight: 800; font-size: 0.82rem; padding: 10px 20px; border-radius: 25px; border: none; cursor: pointer; white-space: nowrap; transition: all 0.25s; }
+    .btn-area.active, .btn-area:hover { background: #0f2043; color: #ffffff; }
+
+    .metrics-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px; margin-bottom: 30px; }
+    .metric-card { background: #f8fafc; border-top: 4px solid #2563eb; padding: 18px 15px; border-radius: 12px; text-align: center; }
+    .metric-card h5 { font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 800; }
+    .metric-card .val { font-size: 1.5rem; font-weight: 800; color: #0f2043; margin-top: 6px; }
+
+    .module-form-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 16px; padding: 30px; margin-bottom: 30px; }
+    .module-form-box h4 { color: #0f2043; margin-bottom: 20px; font-size: 1.1rem; font-weight: 800; }
+    .form-grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+    .form-grid-3 input, .form-grid-3 select, .form-grid-3 textarea { padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; width: 100%; background: #ffffff; }
+    .form-grid-3 textarea { color: #1e293b; }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; margin-top: 20px; }
+    th, td { padding: 12px 15px; border-bottom: 1px solid #e2e8f0; }
+    th { background: #0f2043; color: #ffffff; font-weight: 800; }
+
+    /* MODALES SOLO PARA LOGIN AUTORIZADO DE PROVEEDOR (GMAIL / OUTLOOK) */
+    .modal-overlay { display: none; position: fixed; inset: 0; overflow-y: auto; background: rgba(15, 32, 67, 0.8); backdrop-filter: blur(10px); z-index: 2000; justify-content: center; align-items: center; padding: 20px; }
+    .access-modal-card { background: #ffffff; width: 100%; max-width: 440px; max-height: calc(100vh - 40px); overflow-y: auto; border-radius: 24px; padding: 40px 35px; position: relative; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3); text-align: center; }
+    .close-btn { position: absolute; top: 18px; right: 20px; background: none; border: none; font-size: 1.6rem; color: #94a3b8; cursor: pointer; }
+    .btn-provider-premium { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #cbd5e1; background: #ffffff; color: #1e293b; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.25s; margin-bottom: 12px; }
+    .btn-provider-premium:hover { background: #f8fafc; border-color: #94a3b8; transform: translateY(-2px); }
+
+    /* SECCIÓN DE REDES SOCIALES (CON SUS COLORES DE MARCA ANIMADOS) */
+    .social-media-footer-bar { background: #0f2043; color: #ffffff; padding: 60px 20px; text-align: center; border-top: 3px solid #3b82f6; }
+    .social-container h3 { font-size: 0.95rem; font-weight: 800; letter-spacing: 2.5px; margin-bottom: 30px; color: #93c5fd; }
+    .social-icons-grid { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+    .social-btn { display: flex; align-items: center; gap: 12px; padding: 14px 28px; border-radius: 50px; font-weight: 800; font-size: 0.88rem; text-decoration: none; color: #ffffff; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+    .social-btn svg { width: 20px; height: 20px; }
+    .social-btn:hover { transform: translateY(-4px); border-color: rgba(255, 255, 255, 0.6); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+    
+    /* COLORES INSTITUCIONALES AL PASAR EL CURSOR */
+    .social-btn.instagram:hover { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); border-color: transparent; }
+    .social-btn.facebook:hover { background: #1877f2; border-color: transparent; }
+    .social-btn.tiktok:hover { background: #000000; border-color: rgba(255,255,255,0.4); }
+    .social-btn.twitter:hover { background: #1da1f2; border-color: transparent; }
+
+    .footer { text-align: center; padding: 2.5rem; color: #64748b; font-size: 0.85rem; background: #ffffff; border-top: 1px solid #e2e8f0; font-weight: 600; }
+    .footer-admin-link { display: flex; align-items: center; gap: 14px; width: min(100%, 390px); min-height: 76px; margin: 22px auto 0; padding: 14px 18px; border: 1px solid #dbe3ef; border-radius: 16px; background: linear-gradient(135deg, #fff, #f8fafc); color: #0f2043; text-align: left; cursor: pointer; box-shadow: 0 8px 24px rgba(15,32,67,.07); transition: border-color .2s, box-shadow .2s, transform .2s; }
+    .footer-admin-link:hover { border-color: #93c5fd; box-shadow: 0 12px 30px rgba(15,32,67,.12); transform: translateY(-2px); }
+    .footer-admin-icon { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border-radius: 12px; background: #eff6ff; color: #2563eb; }
+    .footer-admin-copy { display: grid; flex: 1; gap: 3px; }
+    .footer-admin-copy strong { font-size: .9rem; font-weight: 800; }
+    .footer-admin-copy small { color: #64748b; font-size: .73rem; font-weight: 500; }
+    .footer-admin-arrow { color: #64748b; }
+    .hero-image-credit { margin: 12px auto 0; color: #64748b; font-size: .68rem; font-weight: 500; line-height: 1.5; }
+    .hero-image-credit a { color: #475569; text-decoration: underline; text-underline-offset: 2px; }
+    button, a, input, select, textarea { touch-action: manipulation; }
+    button, .btn-acc-public, .btn-acc-leaders, .btn-hero-primary, .btn-hero-secondary { min-height: 44px; }
+    :focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .metric-editor { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .metric-editor label { display: grid; gap: 6px; color: #475569; font-size: .78rem; font-weight: 700; }
+    .metric-editor input, .form-grid-3 input, .form-grid-3 select, .form-grid-3 textarea { min-width: 0; }
+    .module-special-fields { display: none; grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .status-message { min-height: 1.5em; color: #b45309; font-weight: 700; }
+    .review-card { display: grid; gap: 10px; padding: 18px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; margin: 10px 0; }
+    .review-actions { display: flex; gap: 10px; }
+
+    @media (max-width: 1050px) {
+      .navbar-transparent { flex-wrap: wrap; gap: 16px; }
+      .navbar-menu { order: 3; width: 100%; }
+      .nav-links { justify-content: center; flex-wrap: wrap; }
+      .nav-actions { margin-left: auto; }
+    }
+    @media (max-width: 850px) {
+      .navbar-transparent { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+      .nav-toggle { display: inline-grid; place-items: center; }
+      .navbar-menu { display: none; grid-column: 1 / -1; width: 100%; padding: 16px; border: 1px solid rgba(255,255,255,.18); border-radius: 16px; background: rgba(15,32,67,.96); }
+      .navbar-menu.is-open { display: flex; flex-direction: column; align-items: stretch; }
+      .nav-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; }
+      .nav-links li a { display: flex; align-items: center; min-height: 44px; padding: 8px 10px; border-radius: 8px; }
+      .nav-actions { flex-wrap: wrap; justify-content: stretch; margin: 8px 0 0; }
+      .nav-actions button { flex: 1 1 180px; justify-content: center; }
+    }
+    @media (max-width: 700px) {
+      .hero-header { min-height: 88vh; }
+      .hero-title { font-size: clamp(2rem, 9vw, 3rem); }
+      .hero-subtitle { font-size: 1rem; }
+      .hero-overlay-content { max-width: 100%; min-width: 0; padding: 2rem 1rem; }
+      .hero-cta-group { flex-wrap: wrap; justify-content: center; }
+      .btn-hero-primary, .btn-hero-secondary { justify-content: center; }
+      .section-header h2 { font-size: clamp(1.6rem, 7vw, 2.2rem); }
+      .container { padding: 0 14px; }
+      .identity-page-section { padding: 35px 20px; }
+      .identity-story, .identity-story:nth-child(even) { grid-template-columns: 1fr; }
+      .identity-story:nth-child(even) .identity-story-image { order: 0; }
+      .identity-story-image { min-height: 190px; max-height: 240px; }
+      .identity-story-copy { padding: 24px; }
+      #adminDashboard { padding: 24px 16px; }
+      .dashboard-header { align-items: flex-start; gap: 16px; flex-direction: column; }
+      .feedback-card-translucent { padding: 24px 18px; }
+      .module-form-box { padding: 18px; }
+      .form-grid-3, .metric-editor { grid-template-columns: minmax(0, 1fr); }
+      .social-icons-grid { gap: 10px; }
+      .social-btn { justify-content: center; flex: 1 1 140px; padding: 12px 16px; }
+      .feedback-banner-bg { padding: 28px 14px; }
+      .image-feature-card { min-height: 240px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO PRINCIPAL -->
+  <header class="hero-header" id="inicio">
+    <img class="hero-background-image" src="/hero-jesus-2024.jpg" alt="" aria-hidden="true" fetchpriority="high" decoding="async">
+    <div class="hero-image-overlay"></div>
+
+    <nav class="navbar-transparent">
+      <div class="logo-container">
+        <img src="Logo.png" alt="Logo ICAEP" class="church-logo-img">
+        <a href="#mision-vision" class="logo-text">CCICAEP<span>CC</span></a>
+      </div>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primaryMenu" aria-label="Abrir menú de navegación">
+        <i data-feather="menu" aria-hidden="true"></i>
+      </button>
+      <div class="navbar-menu" id="primaryMenu">
+        <ul class="nav-links">
+          <li><a href="#mision-vision">INICIO</a></li>
+          <li><a href="#ofrendas">OFRENDAS</a></li>
+          <li><a href="#ensenanzas">ENSEÑANZAS</a></li>
+          <li><a href="#oracion">ORACIÓN</a></li>
+          <li><a href="#eventos">EVENTOS</a></li>
+          <li><a href="#comunidad">COMUNIDAD</a></li>
+          <li><a href="#pastores">PASTORES</a></li>
+        </ul>
+        <div class="nav-actions">
+          <button class="btn-acc-public" data-open-modal="modal-acc-public"><i data-feather="users"></i> Acceso Comunidad</button>
+          <button class="btn-acc-leaders" data-open-modal="modal-acc-leaders"><i data-feather="shield"></i> Acceso Líderes &amp; Pastores</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="hero-overlay-content">
+      <span class="hero-tag">BIENVENIDOS A CASA</span>
+      <h1 class="hero-title">CENTRO CRISTIANO ICAEP<br><span class="highlight-text">CIUDAD CAMELOT</span></h1>
+      <p class="hero-subtitle">Un lugar de paz, fe, restauración y comunidad en Soledad, Atlántico.</p>
+      
+      <div class="hero-cta-group">
+        <a href="#mision-vision" class="btn-hero-primary">Conoce nuestra iglesia <i data-feather="book-open"></i></a>
+        <a href="#ofrendas" class="btn-hero-secondary">Donaciones & Ofrendas</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- TICKER EN MOVIMIENTO CONTINUO -->
+  <section class="ticker-banner">
+    <div class="ticker-track">
+      <span>✨ BIENVENIDOS A CCICAEPCC CIUDAD CAMELOT</span>
+      <span>🙏 CRONOGRAMA DE INTERCESIÓN DIARIA (3:00 PM)</span>
+      <span>🌱 SIEMBRA Y DIEZMOS TRANSPARENTES (TRIGO, HARINA, ACEITE DE UNCIÓN)</span>
+      <span>🔥 GRAN CONVOCATORIA EVENTO DYNAMO SOLEDAD</span>
+    </div>
+  </section>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="container">
+
+    <!-- Página editorial de identidad con bloques verticales de historia, visión y misión -->
+    <section id="mision-vision" class="identity-page-section">
+      <div class="section-header">
+        <span class="section-badge">NUESTRA IDENTIDAD INSTITUCIONAL</span>
+        <h2>Historia, Visión y Misión</h2>
+        <p>Conoce los fundamentos espirituales y los orígenes de nuestra congregación en Soledad.</p>
+      </div>
+
+      <div class="identity-story-list">
+        <article class="identity-story">
+          <img class="identity-story-image" src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1000&q=80" alt="Familia reunida en comunidad">
+          <div class="identity-story-copy">
+            <h3>📜 Nuestra Historia</h3>
+            <p>Todo comenzó con una visión dada por Dios para levantar un faro de luz, restauración y avivamiento en el sector de Ciudad Camelot, Soledad. Los pastores fundadores respondieron al llamado para edificar una casa de puertas abiertas. A través de la perseverancia, la oración y la fidelidad a la Palabra, el ministerio ha crecido como una familia espiritual que acompaña a los hogares, forma nuevas generaciones y sirve a la región.</p>
+          </div>
+        </article>
+        <article class="identity-story">
+          <img class="identity-story-image" src="https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=1000&q=80" alt="Camino que representa la proyección de la iglesia">
+          <div class="identity-story-copy">
+            <h3>👁️ Nuestra Visión</h3>
+            <p>Ser una iglesia de referencia apostólica y misionera, multiplicadora de casas de paz y de iglesias hijas en todo el departamento. Nos proyectamos formando líderes con sólidos principios éticos, espirituales y sociales, comprometidos con la transformación y el servicio de sus comunidades.</p>
+          </div>
+        </article>
+        <article class="identity-story">
+          <img class="identity-story-image" src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1000&q=80" alt="Personas compartiendo y apoyándose">
+          <div class="identity-story-copy">
+            <h3>📍 Nuestra Misión</h3>
+            <p>Evangelizar, edificar y restaurar a las familias de Ciudad Camelot, Soledad y la región del Atlántico. Formamos discípulos comprometidos con la Gran Comisión, el amor al prójimo y el servicio activo a la comunidad.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="ensenanzas" class="public-section">
+      <div class="image-feature-section teachings-bg">
+        <div class="section-header">
+          <span class="section-badge">CRECIMIENTO ESPIRITUAL</span>
+          <h2>Enseñanzas</h2>
+          <p>Reflexiones y recursos para crecer en la fe, fortalecer el hogar y vivir el evangelio cada día.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="oracion" class="public-section">
+      <div class="image-feature-section prayer-bg">
+        <div class="section-header">
+          <span class="section-badge">ACOMPAÑAMIENTO ESPIRITUAL</span>
+          <h2>Oración</h2>
+          <p>Un espacio para hacer una pausa, buscar a Dios y acompañarnos en oración como comunidad.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="eventos" class="public-section">
+      <div class="section-header events-hero">
+        <span class="section-badge">AGENDA DE LA IGLESIA</span>
+        <h2>Eventos y reuniones</h2>
+        <p>Actividades aprobadas que los líderes y pastores han decidido publicar.</p>
+      </div>
+      <div id="publicEvents" class="event-cards" aria-live="polite">
+        <p class="events-empty">Cargando eventos publicados...</p>
+      </div>
+
+      <section id="testimonios" aria-labelledby="testimonialsHeading">
+        <div class="section-header">
+          <span class="section-badge">TESTIMONIOS DE FE</span>
+          <h2 id="testimonialsHeading">El Heraldo de Camelot</h2>
+          <p>Lo que dice nuestra comunidad: historias compartidas y aprobadas con autorización.</p>
+        </div>
+        <div class="marquee-wrapper">
+          <div id="publicTestimonials" class="marquee-track" aria-live="polite">
+            <p class="testimonial-empty">Cargando testimonios publicados...</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="feedback-banner-bg">
+        <div class="feedback-card-translucent">
+          <h3>Comparte tu testimonio</h3>
+          <p>Cualquier persona puede compartir libremente su experiencia. Las reseñas se revisan antes de aparecer públicamente.</p>
+          <form id="feedbackForm" class="feedback-form">
+            <label class="sr-only" for="testimonialName">Tu nombre</label>
+            <input id="testimonialName" name="name" maxlength="100" placeholder="Tu nombre" required>
+            <fieldset class="rating-fieldset">
+              <legend>Tu calificación (de 1 a 5 estrellas)</legend>
+              <div class="rating-choices">
+                <input id="rating5" name="rating" type="radio" value="5" required>
+                <label for="rating5" aria-label="5 estrellas">★</label>
+                <input id="rating4" name="rating" type="radio" value="4">
+                <label for="rating4" aria-label="4 estrellas">★</label>
+                <input id="rating3" name="rating" type="radio" value="3">
+                <label for="rating3" aria-label="3 estrellas">★</label>
+                <input id="rating2" name="rating" type="radio" value="2">
+                <label for="rating2" aria-label="2 estrellas">★</label>
+                <input id="rating1" name="rating" type="radio" value="1">
+                <label for="rating1" aria-label="1 estrella">★</label>
+              </div>
+            </fieldset>
+            <label class="sr-only" for="testimonialImageUrl">Enlace a una imagen real de tu testimonio (opcional)</label>
+            <input id="testimonialImageUrl" name="imageUrl" type="url" placeholder="Enlace https a una imagen real (opcional)">
+            <label class="sr-only" for="testimonialContent">Tu testimonio o reseña</label>
+            <textarea id="testimonialContent" name="content" minlength="10" maxlength="4000" placeholder="Escribe tu testimonio aquí..." required></textarea>
+            <label style="display:flex; align-items:flex-start; gap:9px; text-align:left; color:#e2e8f0; font-size:.82rem;">
+              <input name="imageConsent" type="checkbox" value="true">
+              Autorizo que mi imagen se muestre si mi testimonio es aprobado.
+            </label>
+            <button type="submit" class="btn-primary-peace" style="background:#ffffff; color:#0f2043; width:100%; margin-top:5px;">ENVIAR TESTIMONIO</button>
+            <p id="testimonialFormStatus" class="form-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="comunidad" class="public-section">
+      <div class="section-header">
+        <span class="section-badge">FE, SERVICIO Y FAMILIA</span>
+        <h2>Nuestra Comunidad</h2>
+        <p>Un lugar para encontrarnos, crecer juntos y servir a Ciudad Camelot.</p>
+      </div>
+      <div class="image-feature-grid community-gallery">
+        <article class="image-feature-card">
+          <img src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&amp;fit=crop&amp;w=1000&amp;q=85" alt="Personas reunidas y compartiendo en comunidad" loading="lazy">
+          <div class="image-feature-copy"><h3>Una familia de puertas abiertas</h3><p>Recibimos a cada persona con amor, respeto y esperanza.</p></div>
+        </article>
+        <article class="image-feature-card">
+          <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&amp;fit=crop&amp;w=1000&amp;q=85" alt="Grupo de personas compartiendo una actividad" loading="lazy">
+          <div class="image-feature-copy"><h3>Crecemos juntos</h3><p>Compartimos la fe y caminamos en comunidad entre generaciones.</p></div>
+        </article>
+        <article class="image-feature-card">
+          <img src="https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&amp;fit=crop&amp;w=1000&amp;q=85" alt="Voluntarios colaborando en una actividad comunitaria" loading="lazy">
+          <div class="image-feature-copy"><h3>Servimos con propósito</h3><p>Ponemos nuestros dones al servicio de las familias y del barrio.</p></div>
+        </article>
+      </div>
+      <div class="section-header" style="margin-top:4rem;">
+        <span class="section-badge">LIDERAZGO Y SERVICIO</span>
+        <h2>Líderes de ministerios</h2>
+        <p>Equipos que acompañan y sirven a nuestra comunidad. Estas fotografías son ilustrativas hasta contar con imágenes oficiales autorizadas.</p>
+      </div>
+      <div class="ministry-gallery">
+        <article class="ministry-gallery-card"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&amp;fit=crop&amp;w=700&amp;q=80" alt="Fotografía ilustrativa del ministerio de damas" loading="lazy"><h3>Damas</h3><p>Comunidad, formación y servicio.</p></article>
+        <article class="ministry-gallery-card"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&amp;fit=crop&amp;w=700&amp;q=80" alt="Fotografía ilustrativa del ministerio de caballeros" loading="lazy"><h3>Caballeros</h3><p>Hermandad, crecimiento y apoyo familiar.</p></article>
+        <article class="ministry-gallery-card"><img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&amp;fit=crop&amp;w=700&amp;q=80" alt="Fotografía ilustrativa de jóvenes y adolescentes" loading="lazy"><h3>Jóvenes y adolescentes</h3><p>Acompañamiento y formación de nuevas generaciones.</p></article>
+        <article class="ministry-gallery-card"><img src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?auto=format&amp;fit=crop&amp;w=700&amp;q=80" alt="Fotografía ilustrativa del ministerio de niños" loading="lazy"><h3>Niños</h3><p>Un espacio de cuidado, aprendizaje y fe.</p></article>
+        <article class="ministry-gallery-card"><img src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&amp;fit=crop&amp;w=700&amp;q=80" alt="Fotografía ilustrativa de música y canto" loading="lazy"><h3>Banda musical</h3><p>Servicio y formación musical.</p></article>
+        <article class="ministry-gallery-card"><img src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&amp;fit=crop&amp;w=700&amp;q=80" alt="Fotografía ilustrativa de evangelismo" loading="lazy"><h3>Evangelismo</h3><p>Servicio y acompañamiento comunitario.</p></article>
+        <article class="ministry-gallery-card"><img src="https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&amp;fit=crop&amp;w=700&amp;q=80" alt="Fotografía ilustrativa del servicio de diáconos" loading="lazy"><h3>Diáconos</h3><p>Cuidado y apoyo a las personas y familias.</p></article>
+        <article class="ministry-gallery-card"><img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&amp;fit=crop&amp;w=700&amp;q=80" alt="Fotografía ilustrativa de emprendimiento comunitario" loading="lazy"><h3>Vendimias</h3><p>Iniciativas de emprendimiento y apoyo solidario.</p></article>
+      </div>
+    </section>
+
+    <!-- OFRENDAS (LAS 3 TARJETAS ORIGINALES) -->
+    <section id="ofrendas" class="public-section">
+      <div class="section-header">
+        <span class="section-badge">GRATITUD Y GENEROSIDAD</span>
+        <h2>OFRENDAS, DIEZMOS Y SIEMBRA</h2>
+      </div>
+
+      <div class="ofrendas-grid">
+        <div class="card offering-card">
+          <div class="offering-img-wrapper">
+            <img src="https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&amp;fit=crop&amp;w=600&amp;q=80" class="offering-img" alt="Campo de trigo al atardecer" loading="lazy">
+            <span class="offering-badge">PRIMICIAS Y TRIGO</span>
+          </div>
+          <h3>Diezmos y Frutos</h3>
+          <p>Reconociendo el sustento de Dios en nuestros hogares.</p>
+          <button class="btn-primary-peace" type="button" data-offering-message="Consulta en la sede las instrucciones vigentes para realizar tu aporte.">Diezmar con Gratitud</button>
+          <p class="offering-feedback" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="card offering-card">
+          <div class="offering-img-wrapper">
+            <img src="https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&amp;fit=crop&amp;w=600&amp;q=80" class="offering-img" alt="Aceite de oliva como símbolo de servicio" loading="lazy">
+            <span class="offering-badge">ACEITE DE UNCIÓN</span>
+          </div>
+          <h3>Ofrenda de Amor</h3>
+          <p>Sembrando en la obra del Señor para sostener el avance pastoral.</p>
+          <button class="btn-primary-peace" type="button" data-offering-message="Puedes realizar tu ofrenda directamente en la sede de Ciudad Camelot.">Sembrar Ofrenda</button>
+          <p class="offering-feedback" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="card offering-card">
+          <div class="offering-img-wrapper">
+            <img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&amp;fit=crop&amp;w=600&amp;q=80" class="offering-img" alt="Pan preparado para compartir" loading="lazy">
+            <span class="offering-badge">FONDO SOLIDARIO</span>
+          </div>
+          <h3>Fondo de Solidaridad</h3>
+          <p>Apoyo directo a familias necesitadas con alimento y recursos.</p>
+          <button class="btn-primary-peace" type="button" data-offering-message="Consulta en la sede cómo apoyar las iniciativas del fondo solidario.">Apoyar Solidaridad</button>
+          <p class="offering-feedback" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PASTORES -->
+    <section id="pastores" class="public-section">
+      <div class="section-header">
+        <span class="section-badge">AUTORIDAD Y GUÍA ESPIRITUAL</span>
+        <h2>Pastores</h2>
+      </div>
+
+      <div class="pastors-container">
+        <div class="pastor-box">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&amp;fit=crop&amp;w=600&amp;q=80" class="pastor-avatar-large" alt="Retrato ilustrativo de liderazgo pastoral" loading="lazy">
+          <h3>Pastores Fundadores</h3>
+          <span class="pastor-role">ICAEP C-Camelot | Soledad</span>
+          <p>"Guiando vidas hacia su propósito eterno, edificando una casa de restauración y avivamiento."</p>
+        </div>
+
+        <div class="pastor-box">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&amp;fit=crop&amp;w=600&amp;q=80" class="pastor-avatar-large" alt="Retrato ilustrativo de liderazgo pastoral" loading="lazy">
+          <h3>Pastores Iglesias Hijas</h3>
+          <span class="pastor-role">Expansión Regional</span>
+          <p>Pastores y líderes encargados de las extensiones ministeriales en el Atlántico.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOFTWARE INTERNO DE LIDERAZGO Y GESTIÓN PARALELA (EXCLUSIVO AUTORIZADOS) -->
+    <section id="adminDashboard" hidden>
+      <div class="dashboard-header">
+        <div>
+          <h2>Panel de gestión interna</h2>
+          <p id="welcomeUserText" style="color:#2563eb; font-weight:700;"></p>
+        </div>
+        <button id="logoutButton" type="button" class="btn-primary-peace" style="background:#dc2626;">Cerrar sesión</button>
+      </div>
+
+      <div id="ministrySelector" class="area-selector-bar" aria-label="Ministerios asignados"></div>
+      <label style="display:inline-grid; gap:6px; margin-bottom:18px; color:#475569; font-weight:700;">Iglesia / sede
+        <select id="churchSelector" style="padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px;"></select>
+      </label>
+      <p id="dashboardMessage" class="status-message" role="status" aria-live="polite"></p>
+
+      <section id="pastoralOverview" hidden>
+        <div class="section-header">
+          <span class="section-badge">COBERTURA PASTORAL</span>
+          <h2>Consolidado de ministerios e iglesias</h2>
+          <p>Resumen general y metas pastorales de los ministerios registrados.</p>
+        </div>
+        <div id="overviewMetrics" class="metrics-row"></div>
+        <div class="card">
+          <h3>Informes pendientes por ministerio</h3>
+          <div id="overviewMinistries"></div>
+        </div>
+        <section id="testimonialModeration" class="module-form-box">
+          <h3>Testimonios pendientes de revisión</h3>
+          <div id="pendingTestimonials"></div>
+        </section>
+      </div>
+
+      <div id="ministryWorkspace" hidden>
+        <div class="module-form-box">
+          <h3 id="metricsTitle">Métricas del ministerio</h3>
+          <form id="metricsForm" class="metric-editor">
+            <label>Total de integrantes<input name="totalMembers" type="number" min="0" required></label>
+            <label>Activos<input name="activeMembers" type="number" min="0" required></label>
+            <label>Inactivos<input name="inactiveMembers" type="number" min="0" required></label>
+            <label>Bautizados<input name="baptizedMembers" type="number" min="0" required></label>
+            <label>No bautizados<input name="nonBaptizedMembers" type="number" min="0" required></label>
+            <label>Nuevos integrantes<input name="newMembers" type="number" min="0" required></label>
+            <label>Retirados<input name="departedMembers" type="number" min="0" required></label>
+            <label>Personas por consolidar<input name="peopleToConsolidate" type="number" min="0" required></label>
+            <label>Visitas programadas<input name="scheduledVisits" type="number" min="0" required></label>
+            <label>Visitas no programadas realizadas<input name="completedUnplannedVisits" type="number" min="0" required></label>
+            <label>Equipo de trabajo<input name="teamMembers" type="number" min="0" required></label>
+            <label>Meta pastoral<input name="pastoralGoal" type="number" min="0" required></label>
+            <button type="submit" class="btn-primary-peace" style="grid-column:1/-1;">Guardar métricas</button>
+          </form>
+        </div>
+
+        <div class="module-form-box">
+          <h3 id="formAreaTitle">Registrar reunión, acta o proyecto</h3>
+          <form id="reportForm" class="form-grid-3">
+            <input name="title" type="text" maxlength="180" placeholder="Nombre de la reunión, acta o proyecto" required>
+            <select name="reportType" aria-label="Tipo de registro">
+              <option value="MEETING">Reunión</option>
+              <option value="MINUTES">Acta</option>
+              <option value="PROPOSAL">Propuesta</option>
+              <option value="PROJECT">Proyecto</option>
+              <option value="REHEARSAL">Ensayo</option>
+              <option value="OUTREACH">Brigada o evangelismo</option>
+            </select>
+            <select name="status" aria-label="Estado del proyecto">
+              <option value="PENDING">En revisión</option>
+              <option value="APPROVED">Aprobado</option>
+              <option value="REJECTED">No aprobado</option>
+            </select>
+            <label>Fecha y hora<input name="meetingAt" type="datetime-local"></label>
+            <input name="location" type="text" maxlength="180" placeholder="Lugar de la reunión o actividad">
+            <input name="budget" type="number" min="0" step="0.01" placeholder="Presupuesto o aporte (COP)">
+            <textarea name="minutes" maxlength="10000" placeholder="Acta y puntos tratados" rows="3"></textarea>
+            <textarea name="proposals" maxlength="10000" placeholder="Proyectos o propuestas y acuerdos" rows="3"></textarea>
+            <textarea name="pastorDirectives" maxlength="5000" placeholder="Directrices y puntos trazados por el pastor" rows="3"></textarea>
+            <textarea name="publicDescription" maxlength="1000" placeholder="Descripción pública (solo se comparte si decides publicar)" rows="3"></textarea>
+
+            <div id="specialVendimias" class="module-special-fields">
+              <label>Inversión (COP)<input name="investment" type="number" min="0" step="0.01"></label>
+              <label>Cantidad de productos<input name="productQuantity" type="number" min="0" step="1"></label>
+              <label>Precio de venta por unidad (COP)<input name="unitPrice" type="number" min="0" step="0.01"></label>
+              <label>Ganancia estimada (COP)<output id="vendimiasProfit">0</output></label>
+              <label>Rentabilidad<output id="vendimiasViability">Pendiente de cálculo</output></label>
+            </div>
+
+            <div id="specialBand" class="module-special-fields">
+              <label>Área o instrumento<input name="instrumentArea" type="text" maxlength="120" placeholder="Voz, teclado, percusión..."></label>
+              <label>Enseñanza de canto<input name="singingLesson" type="text" maxlength="180" placeholder="Tema o ejercicio de formación"></label>
+            </div>
+
+            <div id="specialOutreach" class="module-special-fields">
+              <label>Ubicación de brigada<input name="brigadeLocation" type="text" maxlength="180"></label>
+              <label>Trabajo conjunto<select name="jointWork"><option value="NO_APLICA">No aplica</option><option value="APLICA">Aplica</option><option value="TRABAJO_CONJUNTO">Trabajo conjunto</option></select></label>
+              <label>Ministerio aliado<input name="partnerMinistry" type="text" maxlength="120"></label>
+            </div>
+
+            <fieldset style="grid-column:1/-1; border:1px solid #cbd5e1; border-radius:10px; padding:14px;">
+              <legend style="padding:0 6px; font-weight:800;">Visibilidad del registro</legend>
+              <label><input type="radio" name="publishToWeb" value="false" checked> Guardar en Privado</label>
+              <label style="margin-left:18px;"><input type="radio" name="publishToWeb" value="true"> ¡Publicar en la Web Pública!</label>
+              <small style="display:block; margin-top:8px; color:#64748b;">La publicación requiere marcar esta opción y que el registro esté aprobado. Las actas y directrices pastorales se mantienen internas.</small>
+            </fieldset>
+            <button type="submit" class="btn-primary-peace" style="background:#2563eb; width:100%; grid-column:1/-1;">Guardar registro del ministerio</button>
+          </form>
+        </div>
+
+        <div style="margin-top:25px;">
+          <h3 style="color:#0f2043; margin-bottom:12px;">Reuniones, actas y proyectos</h3>
+          <div style="overflow-x:auto;">
+            <table id="tablaMinisterios">
+              <thead><tr><th>Tipo</th><th>Actividad</th><th>Fecha y lugar</th><th>Estado</th><th>Visibilidad</th><th>Acción</th></tr></thead>
+              <tbody id="reportRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: ACCESO COMUNIDAD (PÚBLICO) -->
+  <div id="modal-acc-public" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="communityAuthTitle">
+    <div class="access-modal-card">
+      <button class="close-btn" data-close-modal="modal-acc-public" aria-label="Cerrar">&times;</button>
+      <div style="width:50px; height:50px; background:#eff6ff; color:#2563eb; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px auto;"><i data-feather="users"></i></div>
+      <h2 id="communityAuthTitle" style="font-size:1.3rem; color:#0f2043; font-weight:800;">Acceso de Comunidad</h2>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:20px;">El registro está abierto para visitantes y miembros. Tu cuenta de comunidad no da acceso al panel interno.</p>
+      
+      <button class="btn-provider-premium" type="button" data-auth-provider="google" data-auth-audience="community">
+        <svg style="width:18px;height:18px;" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 12 1 7.7 1 3.99 3.47L2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+        Continuar con Gmail / Google
+      </button>
+
+      <button class="btn-provider-premium" type="button" data-auth-provider="microsoft" data-auth-audience="community">
+        <svg style="width:18px;height:18px;" viewBox="0 0 24 24"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#00a4ef" d="M1 13h10v10H1z"/><path fill="#7fba00" d="M13 1h10v10H13z"/><path fill="#ffb900" d="M13 13h10v10H13z"/></svg>
+        Continuar con Hotmail / Outlook
+      </button>
+      <p id="generalAuthMessage" role="status" aria-live="polite" style="font-size:0.85rem; color:#64748b; margin-top:12px;"></p>
+      <button id="communityLogoutButton" class="btn-provider-premium" type="button" hidden>Cerrar sesión de comunidad</button>
+    </div>
+  </div>
+
+  <!-- MODAL: ACCESO LÍDERES Y PASTORES -->
+  <div id="modal-acc-leaders" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="leaderAuthTitle">
+    <div class="access-modal-card">
+      <button class="close-btn" data-close-modal="modal-acc-leaders" aria-label="Cerrar">&times;</button>
+      <div style="width:50px; height:50px; background:#eff6ff; color:#2563eb; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px auto;"><i data-feather="shield"></i></div>
+      <h2 id="leaderAuthTitle" style="font-size:1.3rem; color:#0f2043; font-weight:800;">Panel de Líderes y Pastores</h2>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:20px;">Autenticación con correos autorizados:</p>
+      
+      <button class="btn-provider-premium" type="button" data-auth-provider="google">
+        <svg style="width:18px;height:18px;" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 12 1 7.7 1 3.99 3.47L2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+        Continuar con Gmail / Google
+      </button>
+
+      <button class="btn-provider-premium" type="button" data-auth-provider="microsoft">
+        <svg style="width:18px;height:18px;" viewBox="0 0 24 24"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#00a4ef" d="M1 13h10v10H1z"/><path fill="#7fba00" d="M13 1h10v10H13z"/><path fill="#ffb900" d="M13 13h10v10H13z"/></svg>
+        Continuar con Hotmail / Outlook
+      </button>
+      <p id="leaderAuthMessage" role="status" aria-live="polite" style="font-size:0.85rem; color:#b45309; margin-top:12px;"></p>
+    </div>
+  </div>
+
+  <!-- BARRA DE REDES SOCIALES CON COLORES BRILLANTES AL PASAR EL CURSOR -->
+  <section class="social-media-footer-bar">
+    <div class="social-container">
+      <h3>CONÉCTATE CON NUESTRA COMUNIDAD</h3>
+      <div class="social-icons-grid">
+        <a href="https://www.instagram.com/icaep_ccamelot/" target="_blank" rel="noopener noreferrer" class="social-btn instagram">
+          <i data-feather="instagram"></i> Instagram
+        </a>
+        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" class="social-btn facebook">
+          <i data-feather="facebook"></i> Facebook
+        </a>
+        <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" class="social-btn tiktok">
+          <i data-feather="video"></i> TikTok
+        </a>
+        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" class="social-btn twitter">
+          <i data-feather="twitter"></i> Cuenta X
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>&copy; 2026 CENTRO CRISTIANO ICAEP CIUDAD CAMELOT. TODOS LOS DERECHOS RESERVADOS.</p>
+    <button class="footer-admin-link" type="button" data-open-modal="modal-acc-admin">
+      <span class="footer-admin-icon" aria-hidden="true"><i data-feather="shield"></i></span>
+      <span class="footer-admin-copy"><strong>Acceso Admin</strong><small>Portal para administración técnica y programación</small></span>
+      <span class="footer-admin-arrow" aria-hidden="true"><i data-feather="arrow-up-right"></i></span>
+    </button>
+    <p class="hero-image-credit">
+      Imagen: Ninara, <a href="https://commons.wikimedia.org/wiki/File:Via_Crucis_Passion_Play_in_Helsinki_02.jpg" target="_blank" rel="noopener noreferrer">Via Crucis Passion Play in Helsinki 02</a> (2024), bajo <a href="https://creativecommons.org/licenses/by/2.0/" target="_blank" rel="noopener noreferrer">CC BY 2.0</a>.
+    </p>
+  </footer>
+
+  <div id="modal-acc-admin" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="adminAuthTitle">
+    <div class="access-modal-card">
+      <button class="close-btn" data-close-modal="modal-acc-admin" aria-label="Cerrar">&times;</button>
+      <div style="width:50px; height:50px; background:#eff6ff; color:#2563eb; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px auto;"><i data-feather="lock"></i></div>
+      <h2 id="adminAuthTitle" style="font-size:1.3rem; color:#0f2043; font-weight:800;">Acceso Admin</h2>
+      <p style="font-size:0.85rem; color:#64748b; margin:10px 0 20px;">Portal exclusivo de administración técnica y programación.</p>
+      <button class="btn-provider-premium" type="button" data-auth-provider="google" data-auth-audience="admin">Continuar con Gmail / Google</button>
+      <button class="btn-provider-premium" type="button" data-auth-provider="microsoft" data-auth-audience="admin">Continuar con Hotmail / Outlook</button>
+      <p id="adminAuthMessage" role="status" aria-live="polite" class="status-message"></p>
+    </div>
+  </div>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

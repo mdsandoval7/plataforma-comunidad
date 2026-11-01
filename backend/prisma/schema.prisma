@@ -1,0 +1,343 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MemberStatus {
+  VISITOR
+  CATECHUMEN
+  MEMBER
+  INACTIVE
+  TRANSFERRED
+  DECEASED
+}
+
+enum ScopeType {
+  GLOBAL
+  DEPARTMENT
+  MODULE
+}
+
+enum EventType {
+  CULTO
+  SANTA_CENA
+  VIGILIA
+  OTRO
+}
+
+enum BoardPosition {
+  PRESIDENT
+  SECRETARY
+  TREASURER
+  FISCAL
+}
+
+enum EntryType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  REVERSAL
+}
+
+enum EntryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReviewResult {
+  CONFORME
+  OBSERVADO
+  RECHAZADO
+}
+
+model Person {
+  id              String             @id @default(uuid()) @db.Uuid
+  firstName       String
+  lastName        String
+  birthDate       DateTime?          @db.Date
+  phoneEnc        Bytes?
+  emailEnc        Bytes?
+  status          MemberStatus       @default(VISITOR)
+  churchCode      String             @default("ciudad-camelot")
+  baptismDate     DateTime?          @db.Date
+  createdAt       DateTime           @default(now())
+  deletedAt       DateTime?
+  user            User?
+  attendances     Attendance[]
+  communions      CommunionLog[]
+  deptMemberships DepartmentMember[]
+  boardTerms      BoardTerm[]
+  pastoralNotes   PastoralNote[]
+
+  @@index([churchCode, status, deletedAt])
+}
+
+model User {
+  id                   String              @id @default(uuid()) @db.Uuid
+  personId             String?             @unique @db.Uuid
+  email                String              @unique
+  passwordHash         String
+  mfaSecretEnc         Bytes?
+  mfaEnabled           Boolean             @default(false)
+  isActive             Boolean             @default(true)
+  failedLogins         Int                 @default(0)
+  lockedUntil          DateTime?
+  lastLoginAt          DateTime?
+  person               Person?             @relation(fields: [personId], references: [id])
+  roles                RoleAssignment[]
+  sessions             Session[]
+  ledgerCreated        LedgerEntry[]       @relation("LedgerCreatedBy")
+  ledgerApproved       LedgerEntry[]       @relation("LedgerApprovedBy")
+  auditReviews         AuditReview[]
+  ministryReports      MinistryReport[]    @relation("MinistryReportAuthor")
+  reviewedTestimonials PublicTestimonial[] @relation("TestimonialReviewer")
+}
+
+model Session {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  ip        String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Role {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique
+  scopeType   ScopeType
+  description String
+  permissions RolePermission[]
+  assignments RoleAssignment[]
+}
+
+model Permission {
+  id    String           @id @default(uuid()) @db.Uuid
+  code  String           @unique
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model RoleAssignment {
+  id           String      @id @default(uuid()) @db.Uuid
+  userId       String      @db.Uuid
+  roleId       String      @db.Uuid
+  departmentId String?     @db.Uuid
+  validFrom    DateTime    @default(now())
+  validUntil   DateTime?
+  grantedById  String      @db.Uuid
+  user         User        @relation(fields: [userId], references: [id])
+  role         Role        @relation(fields: [roleId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  @@index([userId, validUntil])
+}
+
+model ServiceEvent {
+  id           String         @id @default(uuid()) @db.Uuid
+  type         EventType
+  date         DateTime
+  recordedById String         @db.Uuid
+  attendances  Attendance[]
+  communions   CommunionLog[]
+}
+
+model Attendance {
+  eventId     String       @db.Uuid
+  personId    String       @db.Uuid
+  checkedInAt DateTime     @default(now())
+  event       ServiceEvent @relation(fields: [eventId], references: [id])
+  person      Person       @relation(fields: [personId], references: [id])
+
+  @@id([eventId, personId])
+}
+
+model CommunionLog {
+  eventId      String       @db.Uuid
+  personId     String       @db.Uuid
+  participated Boolean
+  restricted   Boolean      @default(false)
+  event        ServiceEvent @relation(fields: [eventId], references: [id])
+  person       Person       @relation(fields: [personId], references: [id])
+
+  @@id([eventId, personId])
+}
+
+model PastoralNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  personId  String   @db.Uuid
+  bodyEnc   Bytes
+  authorId  String   @db.Uuid
+  createdAt DateTime @default(now())
+  person    Person   @relation(fields: [personId], references: [id])
+}
+
+model Department {
+  id              String             @id @default(uuid()) @db.Uuid
+  code            String             @unique
+  name            String
+  members         DepartmentMember[]
+  boardTerms      BoardTerm[]
+  accounts        FinancialAccount[]
+  roleAssignments RoleAssignment[]
+}
+
+model DepartmentMember {
+  departmentId String     @db.Uuid
+  personId     String     @db.Uuid
+  joinedAt     DateTime   @default(now())
+  department   Department @relation(fields: [departmentId], references: [id])
+  person       Person     @relation(fields: [personId], references: [id])
+
+  @@id([departmentId, personId])
+}
+
+model BoardTerm {
+  id           String        @id @default(uuid()) @db.Uuid
+  departmentId String        @db.Uuid
+  personId     String        @db.Uuid
+  position     BoardPosition
+  termStart    DateTime      @db.Date
+  termEnd      DateTime?     @db.Date
+  department   Department    @relation(fields: [departmentId], references: [id])
+  person       Person        @relation(fields: [personId], references: [id])
+}
+
+model FinancialAccount {
+  id           String        @id @default(uuid()) @db.Uuid
+  departmentId String?       @db.Uuid
+  name         String
+  currency     String        @default("COP")
+  department   Department?   @relation(fields: [departmentId], references: [id])
+  entries      LedgerEntry[]
+}
+
+model LedgerEntry {
+  id           String           @id @default(uuid()) @db.Uuid
+  accountId    String           @db.Uuid
+  type         EntryType
+  amount       Decimal          @db.Decimal(14, 2)
+  concept      String
+  occurredOn   DateTime         @db.Date
+  createdById  String           @db.Uuid
+  approvedById String?          @db.Uuid
+  reversesId   String?          @unique @db.Uuid
+  status       EntryStatus      @default(PENDING)
+  evidenceUrl  String?
+  createdAt    DateTime         @default(now())
+  account      FinancialAccount @relation(fields: [accountId], references: [id])
+  createdBy    User             @relation("LedgerCreatedBy", fields: [createdById], references: [id])
+  approvedBy   User?            @relation("LedgerApprovedBy", fields: [approvedById], references: [id])
+  reverses     LedgerEntry?     @relation("Reversal", fields: [reversesId], references: [id])
+  reversedBy   LedgerEntry?     @relation("Reversal")
+  reviews      AuditReview[]
+
+  @@index([accountId, occurredOn])
+}
+
+model AuditReview {
+  id         String       @id @default(uuid()) @db.Uuid
+  entryId    String       @db.Uuid
+  fiscalId   String       @db.Uuid
+  result     ReviewResult
+  comment    String?
+  reviewedAt DateTime     @default(now())
+  entry      LedgerEntry  @relation(fields: [entryId], references: [id])
+  fiscal     User         @relation(fields: [fiscalId], references: [id])
+}
+
+model AuditLog {
+  id       BigInt   @id @default(autoincrement())
+  actorId  String?  @db.Uuid
+  action   String
+  entity   String
+  entityId String
+  before   Json?
+  after    Json?
+  ip       String?
+  at       DateTime @default(now())
+
+  @@index([entity, entityId])
+}
+
+model DepartmentMetrics {
+  id                       String   @id @default(uuid()) @db.Uuid
+  ministryCode             String
+  churchCode               String   @default("ciudad-camelot")
+  totalMembers             Int      @default(0)
+  activeMembers            Int      @default(0)
+  inactiveMembers          Int      @default(0)
+  baptizedMembers          Int      @default(0)
+  nonBaptizedMembers       Int      @default(0)
+  newMembers               Int      @default(0)
+  departedMembers          Int      @default(0)
+  peopleToConsolidate      Int      @default(0)
+  scheduledVisits          Int      @default(0)
+  completedUnplannedVisits Int      @default(0)
+  teamMembers              Int      @default(0)
+  pastoralGoal             Int      @default(0)
+  updatedAt                DateTime @updatedAt
+
+  @@unique([ministryCode, churchCode])
+  @@index([churchCode])
+}
+
+model MinistryReport {
+  id                String    @id @default(uuid()) @db.Uuid
+  ministryCode      String
+  churchCode        String    @default("ciudad-camelot")
+  reportType        String    @default("MEETING")
+  title             String
+  meetingAt         DateTime?
+  location          String?
+  status            String    @default("PENDING")
+  minutes           String?
+  publicDescription String?
+  proposals         String?
+  pastorDirectives  String?
+  budget            Decimal?  @db.Decimal(14, 2)
+  publishToWeb      Boolean   @default(false)
+  details           Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  createdById       String    @db.Uuid
+  createdBy         User      @relation("MinistryReportAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([ministryCode, createdAt])
+  @@index([churchCode, status, createdAt])
+  @@index([publishToWeb, status, meetingAt])
+}
+
+model PublicTestimonial {
+  id               String    @id @default(uuid()) @db.Uuid
+  name             String
+  content          String
+  imageUrl         String?
+  rating           Int       @default(0)
+  moderationStatus String    @default("PENDING")
+  createdAt        DateTime  @default(now())
+  reviewedAt       DateTime?
+  reviewedById     String?   @db.Uuid
+  reviewedBy       User?     @relation("TestimonialReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([moderationStatus, createdAt])
+  @@index([moderationStatus, rating, createdAt])
+}

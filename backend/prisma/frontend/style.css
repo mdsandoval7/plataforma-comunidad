@@ -1,0 +1,298 @@
+/* PASTORES Y LIDERAZGO EN SOLEDAD */
+.pastors-card-container {
+  display: flex;
+  justify-content: center;
+}
+
+.pastors-profile-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 40px;
+  max-width: 700px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+}
+
+.pastors-img-wrapper {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.pastor-avatar {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #f1f5f9;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.pastors-info h3 {
+  color: #0f2043;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+
+.pastors-location {
+  display: inline-block;
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  margin-bottom: 15px;
+  background: #eff6ff;
+  padding: 4px 14px;
+  border-radius: 20px;
+}
+
+.pastors-info p {
+  color: #475569;
+  font-style: italic;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* BOTÓN DE LOGIN CON GMAIL */
+.btn-google-login {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid #cbd5e1;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  margin-bottom: 15px;
+}
+
+.btn-google-login:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.google-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.auth-divider {
+  text-align: center;
+  margin: 15px 0;
+  position: relative;
+}
+
+.auth-divider span {
+  background: #ffffff;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+/* BARRA DE REDES SOCIALES */
+.social-media-footer-bar {
+  background: #0b132b;
+  color: #ffffff;
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.social-container h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  color: #93c5fd;
+}
+
+.social-icons-grid {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none;
+  color: #ffffff;
+  transition: transform 0.3s, background 0.3s;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.social-btn:hover {
+  transform: translateY(-3px);
+}
+
+.social-btn.instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+.social-btn.facebook { background: #1877f2; }
+.social-btn.tiktok { background: #000000; border: 1px solid rgba(255,255,255,0.2); }
+.social-btn.twitter { background: #1da1f2; }
+/* PASTORES Y LIDERAZGO EN SOLEDAD */
+.pastors-card-container {
+  display: flex;
+  justify-content: center;
+}
+
+.pastors-profile-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 40px;
+  max-width: 700px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+}
+
+.pastors-img-wrapper {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.pastor-avatar {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #f1f5f9;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.pastors-info h3 {
+  color: #0f2043;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+
+.pastors-location {
+  display: inline-block;
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  margin-bottom: 15px;
+  background: #eff6ff;
+  padding: 4px 14px;
+  border-radius: 20px;
+}
+
+.pastors-info p {
+  color: #475569;
+  font-style: italic;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* BOTÓN DE LOGIN CON GMAIL */
+.btn-google-login {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid #cbd5e1;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  margin-bottom: 15px;
+}
+
+.btn-google-login:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.google-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.auth-divider {
+  text-align: center;
+  margin: 15px 0;
+  position: relative;
+}
+
+.auth-divider span {
+  background: #ffffff;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+/* BARRA DE REDES SOCIALES */
+.social-media-footer-bar {
+  background: #0b132b;
+  color: #ffffff;
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.social-container h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  color: #93c5fd;
+}
+
+.social-icons-grid {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none;
+  color: #ffffff;
+  transition: transform 0.3s, background 0.3s;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.social-btn:hover {
+  transform: translateY(-3px);
+}
+
+.social-btn.instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+.social-btn.facebook { background: #1877f2; }
+.social-btn.tiktok { background: #000000; border: 1px solid rgba(255,255,255,0.2); }
+.social-btn.twitter { background: #1da1f2; }

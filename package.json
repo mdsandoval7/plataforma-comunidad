@@ -1,0 +1,24 @@
+{
+  "name": "plataforma-comunidad",
+  "version": "1.0.0",
+  "description": "Plataforma tecnológica enfocada en la automatización de procesos, gestión de actividades y mejora de la comunicación para comunidades y grupos locales.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mdsandoval7/plataforma-comunidad.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mdsandoval7/plataforma-comunidad/issues"
+  },
+  "homepage": "https://github.com/mdsandoval7/plataforma-comunidad#readme"
+}
