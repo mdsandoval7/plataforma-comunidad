@@ -755,10 +755,10 @@
       <h2 id="communityAuthTitle" style="font-size:1.3rem; color:#0f2043; font-weight:800;">Regístrate</h2>
       <p id="communityAuthDescription" style="font-size:0.85rem; color:#64748b; margin:10px 0 20px;">Crea una cuenta de comunidad con tu nombre completo, correo y contraseña.</p>
       <p class="auth-benefit">Crea tu cuenta para enviar peticiones de oración privadas, acceder a devocionales y registrarte en eventos de la comunidad.</p>
-      <form id="communityRegisterForm" class="auth-form">
-        <label>Nombre completo<input name="name" type="text" autocomplete="name" maxlength="100" required></label>
-        <label>Correo electrónico<input name="email" type="email" autocomplete="email" maxlength="254" required></label>
-        <label>Contraseña (mínimo 12 caracteres)<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+      <form id="form-registro" class="auth-form">
+        <label>Nombre completo<input id="nombre-registro" name="name" type="text" autocomplete="name" maxlength="100" required></label>
+        <label>Correo electrónico<input id="email-registro" name="email" type="email" autocomplete="email" maxlength="254" required></label>
+        <label>Contraseña (mínimo 12 caracteres)<input id="password-registro" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
         <button class="btn-provider-premium" type="submit">Crear cuenta</button>
       </form>
       <form id="communityLoginForm" class="auth-form" hidden>

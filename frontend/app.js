@@ -249,10 +249,8 @@ async function startAuth(provider, audience = 'leadership') {
   }
 }
 
-async function submitCommunityRegistration(event) {
-  event.preventDefault();
+async function submitCommunityRegistration(event, values) {
   const form = event.currentTarget;
-  const values = Object.fromEntries(new FormData(form).entries());
   try {
     const actor = await apiRequest('/api/auth/register', {
       method: 'POST',
@@ -410,7 +408,7 @@ function toggleCommunityAuthMode() {
   const toggle = document.getElementById('communityAuthToggle');
   const isRegistering = toggle.dataset.mode === 'register';
   toggle.dataset.mode = isRegistering ? 'login' : 'register';
-  document.getElementById('communityRegisterForm').hidden = isRegistering;
+  document.getElementById('form-registro').hidden = isRegistering;
   document.getElementById('communityLoginForm').hidden = !isRegistering;
   document.getElementById('communityAuthTitle').textContent = isRegistering ? 'Inicia sesión' : 'Regístrate';
   document.getElementById('communityAuthDescription').textContent = isRegistering
@@ -834,7 +832,23 @@ function initializePastorCarousel() {
 
 function attachEventHandlers() {
   initializePastorCarousel();
-  document.getElementById('communityRegisterForm').addEventListener('submit', submitCommunityRegistration);
+  const formRegistro = document.getElementById('form-registro');
+  if (formRegistro) {
+    formRegistro.addEventListener('submit', async event => {
+      event.preventDefault();
+      const nombreInput = document.getElementById('nombre-registro');
+      const emailInput = document.getElementById('email-registro');
+      const passwordInput = document.getElementById('password-registro');
+      if (!nombreInput || !emailInput || !passwordInput) {
+        showMessage('generalAuthMessage', 'No se encontró el formulario de registro completo. Recarga la página e inténtalo de nuevo.', true);
+        return;
+      }
+      const nombre = nombreInput.value;
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      await submitCommunityRegistration(event, { name: nombre, email, password });
+    });
+  }
   document.getElementById('communityLoginForm').addEventListener('submit', event => {
     submitEmailLogin(event, 'community');
   });
