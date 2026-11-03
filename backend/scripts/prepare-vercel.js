@@ -3,8 +3,16 @@ const path = require('node:path');
 
 const sourceDirectory = path.resolve(__dirname, '..', 'prisma', 'frontend');
 const publicDirectory = path.resolve(__dirname, '..', 'public');
-const assets = ['index.html', 'app.js', 'Logo.png', 'hero-jesus-2024.jpg'];
-const pastorImages = Array.from({ length: 6 }, (_, index) => `pastor-${index + 1}.jpeg`);
+const assets = [
+  'index.html',
+  'app.js',
+  'Logo.png',
+  'favicon.png',
+  'style.css',
+  'hero-jesus-2024.jpg',
+  '3195394-hd_1920_1080_25fps.mp4'
+];
+const imageDirectories = ['pastor', 'pastora'];
 
 fs.mkdirSync(publicDirectory, { recursive: true });
 
@@ -15,12 +23,15 @@ for (const asset of assets) {
   );
 }
 
-const publicAssetsDirectory = path.join(publicDirectory, 'assets');
-fs.mkdirSync(publicAssetsDirectory, { recursive: true });
+for (const imageDirectory of imageDirectories) {
+  const sourceAssetsDirectory = path.join(sourceDirectory, 'assets', imageDirectory);
+  const publicAssetsDirectory = path.join(publicDirectory, 'assets', imageDirectory);
+  fs.mkdirSync(publicAssetsDirectory, { recursive: true });
 
-for (const image of pastorImages) {
-  fs.copyFileSync(
-    path.join(sourceDirectory, 'assets', image),
-    path.join(publicAssetsDirectory, image)
-  );
+  for (const image of fs.readdirSync(sourceAssetsDirectory)) {
+    fs.copyFileSync(
+      path.join(sourceAssetsDirectory, image),
+      path.join(publicAssetsDirectory, image)
+    );
+  }
 }

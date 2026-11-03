@@ -248,6 +248,126 @@ async function startAuth(provider, audience = 'leadership') {
   }
 }
 
+async function submitCommunityRegistration(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form).entries());
+  try {
+    const actor = await apiRequest('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(values)
+    });
+    form.reset();
+    authenticatedActor = actor;
+    document.getElementById('communityLogoutButton').hidden = false;
+    closeModal('modal-acc-public');
+    await showMemberDashboard(actor);
+  } catch (error) {
+    showMessage('generalAuthMessage', error.message, true);
+  }
+}
+
+async function submitEmailLogin(event, audience) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form).entries());
+  try {
+    const actor = await apiRequest('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ ...values, audience })
+    });
+    form.reset();
+    if (actor.role === 'community') {
+      document.getElementById('communityLogoutButton').hidden = false;
+      closeModal(audience === 'community' ? 'modal-acc-public' : 'modal-acc-leaders');
+      await showMemberDashboard(actor);
+      return;
+    }
+    await setupDashboard(actor);
+    closeModal(audience === 'community' ? 'modal-acc-public' : 'modal-acc-leaders');
+    showMessage('dashboardMessage', `Acceso correcto. Bienvenido/a, ${actor.name}.`);
+  } catch (error) {
+    showMessage(audience === 'community' ? 'generalAuthMessage' : 'leaderAuthMessage', error.message, true);
+  }
+}
+
+async function loadPrayerRequests() {
+  const list = document.getElementById('prayerRequestList');
+  try {
+    const { requests } = await apiRequest('/api/member/prayer-requests');
+    list.replaceChildren();
+    if (!requests.length) {
+      const emptyState = document.createElement('li');
+      emptyState.textContent = 'Aún no has enviado peticiones de oración.';
+      list.append(emptyState);
+      return;
+    }
+    for (const request of requests) {
+      const item = document.createElement('li');
+      item.textContent = request.content;
+      const details = document.createElement('small');
+      details.textContent = `${formatDate(request.createdAt)} · ${
+        request.status === 'ANSWERED' ? 'Respondida' : request.status === 'PRAYING' ? 'En oración' : 'Recibida'
+      }`;
+      item.append(details);
+      list.append(item);
+    }
+  } catch (error) {
+    showMessage('prayerRequestMessage', error.message, true);
+  }
+}
+
+async function loadMemberDevotionals() {
+  const list = document.getElementById('memberDevotionalList');
+  try {
+    const { devotionals } = await apiRequest('/api/member/devotionals');
+    list.replaceChildren();
+    for (const devotional of devotionals) {
+      const article = document.createElement('article');
+      const heading = document.createElement('h4');
+      heading.textContent = devotional.title;
+      const content = document.createElement('p');
+      content.textContent = devotional.content;
+      article.append(heading, content);
+      list.append(article);
+    }
+  } catch (error) {
+    showMessage('memberDevotionalMessage', error.message, true);
+  }
+}
+
+async function submitPrayerRequest(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const content = new FormData(form).get('content');
+  try {
+    await apiRequest('/api/member/prayer-requests', {
+      method: 'POST',
+      body: JSON.stringify({ content })
+    });
+    form.reset();
+    showMessage('prayerRequestMessage', 'Tu petición privada fue enviada.');
+    await loadPrayerRequests();
+  } catch (error) {
+    showMessage('prayerRequestMessage', error.message, true);
+  }
+}
+
+function toggleCommunityAuthMode() {
+  const toggle = document.getElementById('communityAuthToggle');
+  const isRegistering = toggle.dataset.mode === 'register';
+  toggle.dataset.mode = isRegistering ? 'login' : 'register';
+  document.getElementById('communityRegisterForm').hidden = isRegistering;
+  document.getElementById('communityLoginForm').hidden = !isRegistering;
+  document.getElementById('communityAuthTitle').textContent = isRegistering ? 'Inicia sesión' : 'Regístrate';
+  document.getElementById('communityAuthDescription').textContent = isRegistering
+    ? 'Ingresa con el correo y la contraseña de tu cuenta de comunidad.'
+    : 'Crea una cuenta de comunidad con tu nombre completo, correo y contraseña.';
+  document.querySelector('.auth-benefit').hidden = isRegistering;
+  toggle.textContent = isRegistering ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión';
+  document.getElementById('generalAuthMessage').textContent = '';
+}
+
 function createMetricCard(label, value) {
   const card = document.createElement('div');
   card.className = 'metric-card';
@@ -505,6 +625,7 @@ function setupMinistrySelector() {
 
 async function setupDashboard(actor) {
   authenticatedActor = actor;
+  document.getElementById('memberDashboard').hidden = true;
   const dashboard = document.getElementById('adminDashboard');
   dashboard.hidden = false;
   document.getElementById('welcomeUserText').textContent =
@@ -516,6 +637,18 @@ async function setupDashboard(actor) {
   setupMinistrySelector();
   if (hasPastoralAccess) await loadPastoralOverview();
   if (actor.ministries.length) selectMinistry(actor.ministries[0]);
+  dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function showMemberDashboard(actor) {
+  authenticatedActor = actor;
+  document.getElementById('adminDashboard').hidden = true;
+  document.getElementById('communityLogoutButton').hidden = true;
+  document.getElementById('memberWelcomeName').textContent = actor.name || actor.email;
+  document.getElementById('memberEmail').textContent = actor.email;
+  const dashboard = document.getElementById('memberDashboard');
+  dashboard.hidden = false;
+  await Promise.all([loadPrayerRequests(), loadMemberDevotionals()]);
   dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -596,6 +729,7 @@ async function logout() {
     await apiRequest('/api/auth/logout', { method: 'POST' });
     authenticatedActor = null;
     document.getElementById('adminDashboard').hidden = true;
+    document.getElementById('memberDashboard').hidden = true;
     document.getElementById('communityLogoutButton').hidden = true;
     closeModal('modal-acc-public');
     window.location.hash = '#mision-vision';
@@ -605,53 +739,62 @@ async function logout() {
 }
 
 function initializePastorCarousel() {
-  const carousel = document.querySelector('[data-pastor-carousel]');
-  if (!carousel) return;
+  document.querySelectorAll('[data-pastor-carousel]').forEach(carousel => {
+    const slides = [...carousel.querySelectorAll('.pastor-carousel-image')];
+    const previousButton = carousel.querySelector('[data-pastor-previous]');
+    const nextButton = carousel.querySelector('[data-pastor-next]');
+    const status = carousel.querySelector('[data-pastor-carousel-status]');
+    if (slides.length < 2 || !previousButton || !nextButton) return;
 
-  const slides = [...carousel.querySelectorAll('.pastor-carousel-image')];
-  const previousButton = carousel.querySelector('[data-pastor-previous]');
-  const nextButton = carousel.querySelector('[data-pastor-next]');
-  const status = carousel.querySelector('[data-pastor-carousel-status]');
-  if (slides.length < 2 || !previousButton || !nextButton) return;
+    let currentIndex = 0;
+    let rotationInterval;
 
-  let currentIndex = 0;
-  let rotationInterval;
+    function showSlide(index, announce = false) {
+      currentIndex = (index + slides.length) % slides.length;
+      slides.forEach((slide, slideIndex) => {
+        const isActive = slideIndex === currentIndex;
+        slide.classList.toggle('is-active', isActive);
+        slide.setAttribute('aria-hidden', String(!isActive));
+      });
+      if (announce && status) status.textContent = `Fotografía ${currentIndex + 1} de ${slides.length}`;
+    }
 
-  function showSlide(index, announce = false) {
-    currentIndex = (index + slides.length) % slides.length;
-    slides.forEach((slide, slideIndex) => {
-      const isActive = slideIndex === currentIndex;
-      slide.classList.toggle('is-active', isActive);
-      slide.setAttribute('aria-hidden', String(!isActive));
+    function restartRotation() {
+      window.clearInterval(rotationInterval);
+      rotationInterval = window.setInterval(() => {
+        if (!document.hidden) showSlide(currentIndex + 1);
+      }, 4000);
+    }
+
+    previousButton.addEventListener('click', () => {
+      showSlide(currentIndex - 1, true);
+      restartRotation();
     });
-    if (announce && status) status.textContent = `Fotografía ${currentIndex + 1} de ${slides.length}`;
-  }
+    nextButton.addEventListener('click', () => {
+      showSlide(currentIndex + 1, true);
+      restartRotation();
+    });
 
-  function restartRotation() {
-    window.clearInterval(rotationInterval);
-    rotationInterval = window.setInterval(() => {
-      if (!document.hidden) showSlide(currentIndex + 1);
-    }, 4000);
-  }
-
-  previousButton.addEventListener('click', () => {
-    showSlide(currentIndex - 1, true);
     restartRotation();
   });
-  nextButton.addEventListener('click', () => {
-    showSlide(currentIndex + 1, true);
-    restartRotation();
-  });
-
-  restartRotation();
 }
 
 function attachEventHandlers() {
   initializePastorCarousel();
+  document.getElementById('communityRegisterForm').addEventListener('submit', submitCommunityRegistration);
+  document.getElementById('communityLoginForm').addEventListener('submit', event => {
+    submitEmailLogin(event, 'community');
+  });
+  document.getElementById('leaderLoginForm').addEventListener('submit', event => {
+    submitEmailLogin(event, 'leadership');
+  });
+  document.getElementById('communityAuthToggle').addEventListener('click', toggleCommunityAuthMode);
   document.getElementById('feedbackForm').addEventListener('submit', submitTestimonial);
   document.getElementById('reportForm').addEventListener('submit', saveReport);
   document.getElementById('metricsForm').addEventListener('submit', saveMetrics);
   document.getElementById('logoutButton').addEventListener('click', logout);
+  document.getElementById('memberLogoutButton').addEventListener('click', logout);
+  document.getElementById('prayerRequestForm').addEventListener('submit', submitPrayerRequest);
   document.getElementById('communityLogoutButton').addEventListener('click', logout);
   const menuToggle = document.querySelector('.nav-toggle');
   const primaryMenu = document.getElementById('primaryMenu');
@@ -713,10 +856,9 @@ async function initialize() {
   try {
     const actor = await apiRequest('/api/auth/me');
     if (actor.role === 'community') {
-      document.getElementById('communityLogoutButton').hidden = false;
+      await showMemberDashboard(actor);
       if (new URLSearchParams(window.location.search).get('community') === 'welcome') {
-        showMessage('generalAuthMessage', `Tu acceso de comunidad quedó registrado. ¡Bienvenido/a, ${actor.email}!`);
-        openModal('modal-acc-public');
+        showMessage('prayerRequestMessage', `¡Bienvenido/a, ${actor.name || actor.email}! Ya puedes enviar tus peticiones privadas.`);
         window.history.replaceState({}, '', `${window.location.pathname}${window.location.hash}`);
       }
     } else {

@@ -16,6 +16,29 @@ enum MemberStatus {
   DECEASED
 }
 
+enum AccountRole {
+  MIEMBRO
+  LIDER
+  PASTOR
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum AuthMethod {
+  OAUTH
+  PASSWORD
+}
+
+enum PrayerRequestStatus {
+  PENDING
+  PRAYING
+  ANSWERED
+}
+
 enum ScopeType {
   GLOBAL
   DEPARTMENT
@@ -80,8 +103,11 @@ model Person {
 model User {
   id                   String              @id @default(uuid()) @db.Uuid
   personId             String?             @unique @db.Uuid
+  name                 String
   email                String              @unique
   passwordHash         String
+  role                 AccountRole         @default(MIEMBRO)
+  status               AccountStatus       @default(ACTIVE)
   mfaSecretEnc         Bytes?
   mfaEnabled           Boolean             @default(false)
   isActive             Boolean             @default(true)
@@ -96,20 +122,33 @@ model User {
   auditReviews         AuditReview[]
   ministryReports      MinistryReport[]    @relation("MinistryReportAuthor")
   reviewedTestimonials PublicTestimonial[] @relation("TestimonialReviewer")
+  prayerRequests       PrayerRequest[]
 }
 
 model Session {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @db.Uuid
-  tokenHash String    @unique
-  ip        String?
-  userAgent String?
-  createdAt DateTime  @default(now())
-  expiresAt DateTime
-  revokedAt DateTime?
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String     @db.Uuid
+  authMethod AuthMethod @default(OAUTH)
+  tokenHash  String     @unique
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime   @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model PrayerRequest {
+  id        String               @id @default(uuid()) @db.Uuid
+  userId    String               @db.Uuid
+  content   String               @db.VarChar(4000)
+  status    PrayerRequestStatus  @default(PENDING)
+  createdAt DateTime             @default(now())
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model Role {

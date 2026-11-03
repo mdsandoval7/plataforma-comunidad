@@ -2,10 +2,18 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   getAccess,
+  getPasswordAccess,
+  hashPassword,
+  normalizeEmail,
   parseLeaderAccess,
+  requireMember,
+  validateLogin,
   validateMetrics,
+  validatePrayerRequest,
+  validateRegistration,
   validateReport,
-  validateTestimonialRating
+  validateTestimonialRating,
+  verifyPassword
 } = require('../server');
 
 test('leader access is exact and restricted to the configured ministry', () => {
@@ -41,6 +49,106 @@ test('leader access is exact and restricted to the configured ministry', () => {
       ),
       { status: 403 }
     );
+  } finally {
+    if (previous === undefined) delete process.env.LEADER_ACCESS;
+    else process.env.LEADER_ACCESS = previous;
+    if (previousChurches === undefined) delete process.env.CHURCHES;
+    else process.env.CHURCHES = previousChurches;
+  }
+});
+
+test('email registration and login inputs are normalized and validated', () => {
+  assert.deepEqual(validateRegistration({
+    name: '  Ana Pérez  ',
+    email: ' ANA@example.org ',
+    password: 'a-secure-password'
+  }), {
+    name: 'Ana Pérez',
+    email: 'ana@example.org',
+    password: 'a-secure-password'
+  });
+  assert.deepEqual(validateLogin({
+    email: 'LEADER@example.org',
+    password: 'correct-password',
+    audience: 'leadership'
+  }), {
+    email: 'leader@example.org',
+    password: 'correct-password',
+    audience: 'leadership'
+  });
+  assert.equal(normalizeEmail(' USER@example.org '), 'user@example.org');
+  assert.throws(() => validateRegistration({
+    name: 'Ana',
+    email: 'ana@example.org',
+    password: 'short'
+  }), { status: 400 });
+  assert.throws(() => validateLogin({
+    email: 'not-an-email',
+    password: 'correct-password'
+  }), { status: 400 });
+});
+
+test('passwords are stored as scrypt hashes and checked safely', async () => {
+  const password = 'a-secure-password';
+  const encodedHash = await hashPassword(password);
+  assert.match(encodedHash, /^scrypt\$16384\$8\$1\$/);
+  assert.equal(await verifyPassword(password, encodedHash), true);
+  assert.equal(await verifyPassword('a-different-password', encodedHash), false);
+  assert.equal(await verifyPassword(password, 'OAUTH_ONLY'), false);
+});
+
+test('prayer requests are trimmed and bounded in length', () => {
+  assert.deepEqual(validatePrayerRequest({ content: '  Oren por mi familia  ' }), {
+    content: 'Oren por mi familia'
+  });
+  assert.throws(() => validatePrayerRequest({ content: 'corto' }), { status: 400 });
+  assert.throws(() => validatePrayerRequest({ content: 'x'.repeat(4001) }), { status: 400 });
+});
+
+test('member-only routes reject leaders and allow community accounts', () => {
+  const response = {
+    statusCode: 200,
+    body: null,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(body) {
+      this.body = body;
+      return this;
+    }
+  };
+  let continued = false;
+  requireMember({ actor: { role: 'leader' } }, response, () => { continued = true; });
+  assert.equal(response.statusCode, 403);
+  assert.equal(continued, false);
+
+  requireMember({ actor: { role: 'community' } }, response, () => { continued = true; });
+  assert.equal(continued, true);
+});
+
+test('public member registrations cannot inherit leader access from email allowlists', () => {
+  const previous = process.env.LEADER_ACCESS;
+  const previousChurches = process.env.CHURCHES;
+  process.env.CHURCHES = 'ciudad-camelot:CCICAEPCC Ciudad Camelot';
+  process.env.LEADER_ACCESS = 'leader@example.org=damas@ciudad-camelot';
+  try {
+    assert.deepEqual(getPasswordAccess({
+      email: 'leader@example.org',
+      role: 'MIEMBRO'
+    }), {
+      role: 'community',
+      ministries: [],
+      churchCodes: []
+    });
+    assert.equal(getPasswordAccess({
+      email: 'leader@example.org',
+      role: 'LIDER'
+    }).role, 'leader');
+    assert.equal(getPasswordAccess({
+      email: 'other@example.org',
+      role: 'LIDER'
+    }), null);
   } finally {
     if (previous === undefined) delete process.env.LEADER_ACCESS;
     else process.env.LEADER_ACCESS = previous;

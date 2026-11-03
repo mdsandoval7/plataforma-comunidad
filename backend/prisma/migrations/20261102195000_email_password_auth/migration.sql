@@ -1,0 +1,18 @@
+CREATE TYPE "AccountRole" AS ENUM ('MIEMBRO', 'LIDER', 'PASTOR');
+CREATE TYPE "AccountStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'PENDING');
+CREATE TYPE "AuthMethod" AS ENUM ('OAUTH', 'PASSWORD');
+
+ALTER TABLE "User"
+ADD COLUMN "name" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "role" "AccountRole" NOT NULL DEFAULT 'MIEMBRO',
+ADD COLUMN "status" "AccountStatus" NOT NULL DEFAULT 'ACTIVE';
+
+UPDATE "User"
+SET "name" = split_part("email", '@', 1)
+WHERE "name" = '';
+
+ALTER TABLE "User"
+ALTER COLUMN "name" DROP DEFAULT;
+
+ALTER TABLE "Session"
+ADD COLUMN "authMethod" "AuthMethod" NOT NULL DEFAULT 'OAUTH';

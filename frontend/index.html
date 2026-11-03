@@ -6,6 +6,7 @@
   <link rel="icon" type="image/png" href="./favicon.png">
   <title>CCICAEPCC - Centro Cristiano ICAEP Ciudad Camelot</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
   <script src="https://unpkg.com/feather-icons"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; scroll-behavior: smooth; }
@@ -132,14 +133,6 @@
     .pastors-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 30px; }
     .pastor-box { background: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; padding: 40px 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.03); transition: all 0.3s; }
     .pastor-box:hover { transform: translateY(-6px); border-color: #2563eb; box-shadow: 0 15px 35px rgba(37,99,235,0.1); }
-    .pastor-carousel { width: min(100%, 360px); margin: 0 auto 22px; }
-    .pastor-carousel-frame { position: relative; width: 100%; aspect-ratio: 4 / 5; overflow: hidden; border: 4px solid #eff6ff; border-radius: 18px; background: #e2e8f0; }
-    .pastor-carousel-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .65s ease; }
-    .pastor-carousel-image.is-active { z-index: 1; opacity: 1; }
-    .pastor-carousel-controls { display: flex; justify-content: center; gap: 12px; margin-top: 12px; }
-    .pastor-carousel-controls button { min-height: 36px; padding: 7px 14px; border: 1px solid #bfdbfe; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; transition: background .2s, color .2s; }
-    .pastor-carousel-controls button:hover { background: #2563eb; color: #fff; }
-    .pastor-carousel-controls button:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
     .pastor-avatar-large { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid #eff6ff; margin-bottom: 18px; }
     .pastor-box h3 { color: #0f2043; font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; }
     .pastor-role { display: inline-block; color: #2563eb; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; margin-bottom: 14px; background: #eff6ff; padding: 4px 14px; border-radius: 20px; }
@@ -193,6 +186,15 @@
     .close-btn { position: absolute; top: 18px; right: 20px; background: none; border: none; font-size: 1.6rem; color: #94a3b8; cursor: pointer; }
     .btn-provider-premium { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #cbd5e1; background: #ffffff; color: #1e293b; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.25s; margin-bottom: 12px; }
     .btn-provider-premium:hover { background: #f8fafc; border-color: #94a3b8; transform: translateY(-2px); }
+    .auth-form { display: grid; gap: 12px; margin: 20px 0 12px; text-align: left; }
+    .auth-form label { display: grid; gap: 6px; color: #475569; font-size: .82rem; font-weight: 700; }
+    .auth-form input { width: 100%; min-height: 44px; padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #1e293b; font: inherit; }
+    .auth-form input:focus { border-color: #2563eb; outline: 2px solid #bfdbfe; }
+    .auth-form .btn-provider-premium { margin: 0; background: #0f2043; color: #fff; }
+    .auth-form .btn-provider-premium:hover { background: #1e3a8a; }
+    .auth-mode-toggle { border: 0; padding: 8px; background: transparent; color: #2563eb; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; }
+    .auth-provider-options { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+    .auth-provider-options > p { margin-bottom: 12px; color: #64748b; font-size: .82rem; }
 
     /* SECCIÓN DE REDES SOCIALES (CON SUS COLORES DE MARCA ANIMADOS) */
     .social-media-footer-bar { background: #0f2043; color: #ffffff; padding: 60px 20px; text-align: center; border-top: 3px solid #3b82f6; }
@@ -303,8 +305,8 @@
           <li><a href="#pastores">PASTORES</a></li>
         </ul>
         <div class="nav-actions">
-          <button class="btn-acc-public" data-open-modal="modal-acc-public"><i data-feather="users"></i> Acceso Comunidad</button>
-          <button class="btn-acc-leaders" data-open-modal="modal-acc-leaders"><i data-feather="shield"></i> Acceso Líderes &amp; Pastores</button>
+          <button class="btn-acc-public" data-open-modal="modal-acc-public"><i data-feather="users"></i> Regístrate</button>
+          <button class="btn-acc-leaders" data-open-modal="modal-acc-leaders"><i data-feather="shield"></i> Acceso</button>
         </div>
       </div>
     </nav>
@@ -536,14 +538,14 @@
 
       <div class="pastors-container">
         <div class="pastor-box">
-          <div class="pastor-carousel" data-pastor-carousel role="region" aria-label="Carrusel de fotografías del Pastor Fundador" aria-roledescription="carrusel">
+          <div class="pastor-carousel" data-pastor-carousel role="region" aria-label="Fotografías de Jecson Manuel Cantillo Alvares" aria-roledescription="carrusel">
             <div class="pastor-carousel-frame">
-              <img class="pastor-carousel-image is-active" src="./assets/pastor-1.jpeg" alt="Pastor fundador, fotografía 1 de 6" decoding="async">
-              <img class="pastor-carousel-image" src="./assets/pastor-2.jpeg" alt="Pastor fundador, fotografía 2 de 6" decoding="async" aria-hidden="true">
-              <img class="pastor-carousel-image" src="./assets/pastor-3.jpeg" alt="Pastor fundador, fotografía 3 de 6" decoding="async" aria-hidden="true">
-              <img class="pastor-carousel-image" src="./assets/pastor-4.jpeg" alt="Pastor fundador, fotografía 4 de 6" decoding="async" aria-hidden="true">
-              <img class="pastor-carousel-image" src="./assets/pastor-5.jpeg" alt="Pastor fundador, fotografía 5 de 6" decoding="async" aria-hidden="true">
-              <img class="pastor-carousel-image" src="./assets/pastor-6.jpeg" alt="Pastor fundador, fotografía 6 de 6" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image is-active" src="./assets/pastor/pastor-1.jpeg" alt="Jecson Manuel Cantillo Alvares, fotografía 1 de 6" decoding="async">
+              <img class="pastor-carousel-image" src="./assets/pastor/pastor-2.jpeg" alt="Jecson Manuel Cantillo Alvares, fotografía 2 de 6" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image" src="./assets/pastor/pastor-3.jpeg" alt="Jecson Manuel Cantillo Alvares, fotografía 3 de 6" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image" src="./assets/pastor/pastor-4.jpeg" alt="Jecson Manuel Cantillo Alvares, fotografía 4 de 6" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image" src="./assets/pastor/pastor-5.jpeg" alt="Jecson Manuel Cantillo Alvares, fotografía 5 de 6" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image" src="./assets/pastor/pastor-6.jpeg" alt="Jecson Manuel Cantillo Alvares, fotografía 6 de 6" decoding="async" aria-hidden="true">
             </div>
             <div class="pastor-carousel-controls">
               <button type="button" data-pastor-previous aria-label="Mostrar fotografía anterior del Pastor Fundador">Anterior</button>
@@ -551,16 +553,27 @@
             </div>
             <span class="sr-only" data-pastor-carousel-status aria-live="polite" aria-atomic="true">Fotografía 1 de 6</span>
           </div>
-          <h3>Pastores Fundadores</h3>
-          <span class="pastor-role">ICAEP C-Camelot | Soledad</span>
+          <h3>Jecson Manuel Cantillo Alvares</h3>
+          <span class="pastor-role">Pastor Fundador</span>
           <p>"Guiando vidas hacia su propósito eterno, edificando una casa de restauración y avivamiento."</p>
         </div>
 
         <div class="pastor-box">
-          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&amp;fit=crop&amp;w=600&amp;q=80" class="pastor-avatar-large" alt="Retrato ilustrativo de liderazgo pastoral" loading="lazy">
-          <h3>Pastores Iglesias Hijas</h3>
-          <span class="pastor-role">Expansión Regional</span>
-          <p>Pastores y líderes encargados de las extensiones ministeriales en el Atlántico.</p>
+          <div class="pastor-carousel" data-pastor-carousel role="region" aria-label="Fotografías de Mayra Alana Hernández Palacio" aria-roledescription="carrusel">
+            <div class="pastor-carousel-frame">
+              <img class="pastor-carousel-image is-active" src="./assets/pastora/pastora-1.jpeg" alt="Mayra Alana Hernández Palacio, fotografía 1 de 4" decoding="async">
+              <img class="pastor-carousel-image" src="./assets/pastora/pastora-2.jpeg" alt="Mayra Alana Hernández Palacio, fotografía 2 de 4" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image" src="./assets/pastora/pastora-3.jpeg" alt="Mayra Alana Hernández Palacio, fotografía 3 de 4" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image" src="./assets/pastora/pastora-4.jpeg" alt="Mayra Alana Hernández Palacio, fotografía 4 de 4" decoding="async" aria-hidden="true">
+            </div>
+            <div class="pastor-carousel-controls">
+              <button type="button" data-pastor-previous aria-label="Mostrar fotografía anterior de Mayra Alana Hernández Palacio">Anterior</button>
+              <button type="button" data-pastor-next aria-label="Mostrar fotografía siguiente de Mayra Alana Hernández Palacio">Siguiente</button>
+            </div>
+            <span class="sr-only" data-pastor-carousel-status aria-live="polite" aria-atomic="true">Fotografía 1 de 4</span>
+          </div>
+          <h3>Mayra Alana Hernández Palacio</h3>
+          <span class="pastor-role">Pastora Fundadora</span>
         </div>
       </div>
     </section>
@@ -686,23 +699,69 @@
 
   </main>
 
-  <!-- MODAL: ACCESO COMUNIDAD (PÚBLICO) -->
+  <section id="memberDashboard" class="member-dashboard" aria-labelledby="memberDashboardTitle" hidden>
+    <div class="member-dashboard-header">
+      <div>
+        <p class="member-eyebrow">Espacio privado de la comunidad</p>
+        <h2 id="memberDashboardTitle">Tu perfil</h2>
+        <p>Bienvenido/a, <strong id="memberWelcomeName"></strong> <span id="memberEmail"></span></p>
+      </div>
+      <button id="memberLogoutButton" class="member-logout-button" type="button">Cerrar sesión</button>
+    </div>
+
+    <div class="member-dashboard-grid">
+      <section class="member-panel" aria-labelledby="prayerRequestTitle">
+        <h3 id="prayerRequestTitle">Peticiones de oración privadas</h3>
+        <p>Solo tú puedes consultar las peticiones enviadas desde esta cuenta.</p>
+        <form id="prayerRequestForm" class="prayer-request-form">
+          <label for="prayerRequestContent">¿Por qué te gustaría que oremos?</label>
+          <textarea id="prayerRequestContent" name="content" rows="5" minlength="10" maxlength="4000" required></textarea>
+          <button type="submit" class="btn-primary-peace">Enviar petición privada</button>
+        </form>
+        <p id="prayerRequestMessage" class="member-feedback" role="status" aria-live="polite"></p>
+        <ul id="prayerRequestList" class="prayer-request-list" aria-live="polite"></ul>
+      </section>
+
+      <section class="member-panel member-devotionals" aria-labelledby="memberDevotionalsTitle">
+        <p class="member-eyebrow">Contenido para miembros</p>
+        <h3 id="memberDevotionalsTitle">Devocionales</h3>
+        <p id="memberDevotionalMessage" class="member-feedback" role="status" aria-live="polite"></p>
+        <div id="memberDevotionalList"></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- MODAL: REGISTRO E INICIO DE SESIÓN DE LA COMUNIDAD -->
   <div id="modal-acc-public" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="communityAuthTitle">
-    <div class="access-modal-card">
+    <div class="access-modal-card auth-modal-card">
       <button class="close-btn" data-close-modal="modal-acc-public" aria-label="Cerrar">&times;</button>
       <div style="width:50px; height:50px; background:#eff6ff; color:#2563eb; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px auto;"><i data-feather="users"></i></div>
-      <h2 id="communityAuthTitle" style="font-size:1.3rem; color:#0f2043; font-weight:800;">Acceso de Comunidad</h2>
-      <p style="font-size:0.85rem; color:#64748b; margin-bottom:20px;">El registro está abierto para visitantes y miembros. Tu cuenta de comunidad no da acceso al panel interno.</p>
-      
-      <button class="btn-provider-premium" type="button" data-auth-provider="google" data-auth-audience="community">
-        <svg style="width:18px;height:18px;" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 12 1 7.7 1 3.99 3.47L2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-        Continuar con Gmail / Google
-      </button>
-
-      <button class="btn-provider-premium" type="button" data-auth-provider="microsoft" data-auth-audience="community">
-        <svg style="width:18px;height:18px;" viewBox="0 0 24 24"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#00a4ef" d="M1 13h10v10H1z"/><path fill="#7fba00" d="M13 1h10v10H13z"/><path fill="#ffb900" d="M13 13h10v10H13z"/></svg>
-        Continuar con Hotmail / Outlook
-      </button>
+      <h2 id="communityAuthTitle" style="font-size:1.3rem; color:#0f2043; font-weight:800;">Regístrate</h2>
+      <p id="communityAuthDescription" style="font-size:0.85rem; color:#64748b; margin:10px 0 20px;">Crea una cuenta de comunidad con tu nombre completo, correo y contraseña.</p>
+      <p class="auth-benefit">Crea tu cuenta para enviar peticiones de oración privadas, acceder a devocionales y registrarte en eventos de la comunidad.</p>
+      <form id="communityRegisterForm" class="auth-form">
+        <label>Nombre completo<input name="name" type="text" autocomplete="name" maxlength="100" required></label>
+        <label>Correo electrónico<input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+        <label>Contraseña (mínimo 12 caracteres)<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+        <button class="btn-provider-premium" type="submit">Crear cuenta</button>
+      </form>
+      <form id="communityLoginForm" class="auth-form" hidden>
+        <label>Correo electrónico<input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+        <label>Contraseña<input name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
+        <button class="btn-provider-premium" type="submit">Iniciar sesión</button>
+      </form>
+      <button id="communityAuthToggle" class="auth-mode-toggle" type="button" data-mode="register">¿Ya tienes cuenta? Inicia sesión</button>
+      <div class="auth-provider-options">
+        <p>O continúa con un proveedor:</p>
+        <button class="btn-provider-premium" type="button" data-auth-provider="google" data-auth-audience="community">
+          <svg style="width:18px;height:18px;" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 12 1 7.7 1 3.99 3.47L2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+          Continuar con Gmail / Google
+        </button>
+        <button class="btn-provider-premium" type="button" data-auth-provider="microsoft" data-auth-audience="community">
+          <svg style="width:18px;height:18px;" viewBox="0 0 24 24"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#00a4ef" d="M1 13h10v10H1z"/><path fill="#7fba00" d="M13 1h10v10H13z"/><path fill="#ffb900" d="M13 13h10v10H13z"/></svg>
+          Continuar con Hotmail / Outlook
+        </button>
+      </div>
       <p id="generalAuthMessage" role="status" aria-live="polite" style="font-size:0.85rem; color:#64748b; margin-top:12px;"></p>
       <button id="communityLogoutButton" class="btn-provider-premium" type="button" hidden>Cerrar sesión de comunidad</button>
     </div>
@@ -710,12 +769,18 @@
 
   <!-- MODAL: ACCESO LÍDERES Y PASTORES -->
   <div id="modal-acc-leaders" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="leaderAuthTitle">
-    <div class="access-modal-card">
+    <div class="access-modal-card auth-modal-card">
       <button class="close-btn" data-close-modal="modal-acc-leaders" aria-label="Cerrar">&times;</button>
       <div style="width:50px; height:50px; background:#eff6ff; color:#2563eb; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px auto;"><i data-feather="shield"></i></div>
-      <h2 id="leaderAuthTitle" style="font-size:1.3rem; color:#0f2043; font-weight:800;">Panel de Líderes y Pastores</h2>
-      <p style="font-size:0.85rem; color:#64748b; margin-bottom:20px;">Autenticación con correos autorizados:</p>
-      
+      <h2 id="leaderAuthTitle" style="font-size:1.3rem; color:#0f2043; font-weight:800;">Acceso</h2>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:20px;">Ingresa con el correo y la contraseña de tu cuenta autorizada. Los roles de liderazgo los asigna un administrador.</p>
+      <form id="leaderLoginForm" class="auth-form">
+        <label>Correo electrónico<input name="email" type="email" autocomplete="username" maxlength="254" required></label>
+        <label>Contraseña<input name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
+        <button class="btn-provider-premium" type="submit">Acceder</button>
+      </form>
+      <div class="auth-provider-options">
+        <p>O continúa con un proveedor autorizado:</p>
       <button class="btn-provider-premium" type="button" data-auth-provider="google">
         <svg style="width:18px;height:18px;" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 12 1 7.7 1 3.99 3.47L2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
         Continuar con Gmail / Google
@@ -725,6 +790,7 @@
         <svg style="width:18px;height:18px;" viewBox="0 0 24 24"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#00a4ef" d="M1 13h10v10H1z"/><path fill="#7fba00" d="M13 1h10v10H13z"/><path fill="#ffb900" d="M13 13h10v10H13z"/></svg>
         Continuar con Hotmail / Outlook
       </button>
+      </div>
       <p id="leaderAuthMessage" role="status" aria-live="polite" style="font-size:0.85rem; color:#b45309; margin-top:12px;"></p>
     </div>
   </div>

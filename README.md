@@ -32,19 +32,21 @@ Este proyecto nace con el objetivo de aplicar tecnologías accesibles e innovado
 
 ## Backend y acceso al portal
 
-El portal usa Node.js, Express, Prisma y PostgreSQL. La comunidad puede crear una sesión de acceso con OAuth de Google o Microsoft. Los correos de líderes, pastores y administradores se autorizan por separado en el servidor; una cuenta comunitaria nunca obtiene permisos internos.
+El portal usa Node.js, Express, Prisma y PostgreSQL. La comunidad puede registrarse con nombre, correo y contraseña, o iniciar sesión mediante OAuth de Google o Microsoft. Las contraseñas se almacenan con scrypt; el servidor crea sesiones con cookies HTTP-only. Los correos de líderes, pastores y administradores se autorizan por separado; el registro público siempre crea una cuenta `MIEMBRO` y nunca concede permisos internos.
 
 1. Copia `backend/.env.example` a `backend/.env` y completa la conexión PostgreSQL, una clave `SESSION_SECRET` aleatoria de al menos 32 caracteres y `BASE_URL`.
 2. Registra en Google Cloud y/o Microsoft Entra las URL de retorno:
    - `{BASE_URL}/api/auth/google/callback`
    - `{BASE_URL}/api/auth/microsoft/callback`
 3. Configura los correos autorizados del servidor:
-   - El registro de comunidad está abierto mediante Google o Microsoft; estas cuentas no reciben permisos internos.
+   - El registro de comunidad está abierto en la web o mediante Google o Microsoft; las cuentas públicas no reciben permisos internos.
    - `ADMIN_EMAILS`: administradores técnicos con acceso total.
    - `PASTOR_EMAILS`: pastores con acceso consolidado y moderación.
    - `LEADER_ACCESS`: asignación por correo, ministerio e iglesia. Ejemplo: `lider@example.org=damas@ciudad-camelot`.
    - `CHURCHES`: códigos y nombres de iglesias separados por punto y coma. Ejemplo: `ciudad-camelot:CCICAEPCC Ciudad Camelot;iglesia-hija:Nombre de la iglesia hija`.
 4. Desde `backend`, ejecuta `npm run prisma:migrate`, `npm run prisma:generate` y `npm start`.
+
+Las rutas de contraseña son `POST /api/auth/register` y `POST /api/auth/login`. El registro requiere una contraseña de 12 a 128 bytes y asigna el rol `MIEMBRO`; al iniciar sesión, la interfaz dirige a los miembros a su perfil y a los roles autorizados al panel correspondiente. Los miembros pueden enviar y consultar sus peticiones privadas en `POST` y `GET /api/member/prayer-requests`, y acceder a los devocionales mediante `GET /api/member/devotionals`. La API filtra las peticiones por la cuenta autenticada y no expone las peticiones ni los devocionales a visitantes o líderes. Para habilitar acceso por contraseña de un líder, un administrador debe verificar su identidad, asignar el rol `LIDER` en la base de datos y autorizar su alcance en `LEADER_ACCESS`. Para pastores, un administrador debe asignar `PASTOR`; los privilegios de administrador técnico siguen dependiendo de `ADMIN_EMAILS`. Nunca permitas que el formulario público elija un rol.
 
 Los informes de ministerios quedan privados salvo que se marquen para publicación y estén aprobados. Los testimonios enviados por el público se guardan como pendientes y solo aparecen tras revisión pastoral; el carrusel público muestra hasta seis testimonios aprobados. Las métricas de integrantes solo están disponibles dentro del panel autorizado y no se publican en la web. Usa HTTPS en producción y no compartas ni confirmes credenciales OAuth desde el navegador.
 

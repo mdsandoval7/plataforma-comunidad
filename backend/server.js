@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const crypto = require('node:crypto');
+const { promisify } = require('node:util');
 const path = require('node:path');
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
@@ -11,6 +12,11 @@ const frontendPath = path.join(__dirname, 'prisma', 'frontend');
 const sessionCookieName = 'ccicaep_session';
 const oauthCookieName = 'ccicaep_oauth';
 const sessionLifetimeMs = 8 * 60 * 60 * 1000;
+const passwordKeyLength = 64;
+const scryptAsync = promisify(crypto.scrypt);
+const scryptOptions = { N: 16_384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+const dummyPasswordSalt = Buffer.alloc(16, 0x5a);
+const dummyPasswordHash = crypto.scryptSync('invalid-password-placeholder', dummyPasswordSalt, passwordKeyLength, scryptOptions).toString('hex');
 const ministries = new Set([
   'damas',
   'caballeros',
@@ -64,6 +70,68 @@ app.use((req, res, next) => {
 
 function parseEmailList(value = '') {
   return new Set(value.split(',').map(email => email.trim().toLowerCase()).filter(Boolean));
+}
+
+function normalizeEmail(value) {
+  if (typeof value !== 'string') throw Object.assign(new Error('Ingresa un correo electrónico válido.'), { status: 400 });
+  const email = value.trim().toLowerCase();
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw Object.assign(new Error('Ingresa un correo electrónico válido.'), { status: 400 });
+  }
+  return email;
+}
+
+function validateRegistration(body = {}) {
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  if (!name || name.length > 100) {
+    throw Object.assign(new Error('El nombre es obligatorio y no puede superar 100 caracteres.'), { status: 400 });
+  }
+  const email = normalizeEmail(body.email);
+  if (typeof body.password !== 'string' || body.password.length < 12 || Buffer.byteLength(body.password, 'utf8') > 128) {
+    throw Object.assign(new Error('La contraseña debe tener entre 12 y 128 bytes.'), { status: 400 });
+  }
+  return { name, email, password: body.password };
+}
+
+function validateLogin(body = {}) {
+  const email = normalizeEmail(body.email);
+  if (typeof body.password !== 'string' || !body.password || Buffer.byteLength(body.password, 'utf8') > 128) {
+    throw Object.assign(new Error('Ingresa tu contraseña.'), { status: 400 });
+  }
+  const audience = body.audience || 'leadership';
+  if (!['community', 'leadership'].includes(audience)) {
+    throw Object.assign(new Error('El tipo de acceso solicitado no es válido.'), { status: 400 });
+  }
+  return { email, password: body.password, audience };
+}
+
+function validatePrayerRequest(body = {}) {
+  const content = typeof body.content === 'string' ? body.content.trim() : '';
+  if (content.length < 10 || content.length > 4000) {
+    throw Object.assign(new Error('La petición debe tener entre 10 y 4000 caracteres.'), { status: 400 });
+  }
+  return { content };
+}
+
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const hash = await scryptAsync(password, salt, passwordKeyLength, scryptOptions);
+  return `scrypt$16384$8$1$${salt.toString('hex')}$${hash.toString('hex')}`;
+}
+
+async function verifyPassword(password, encodedHash) {
+  const parts = typeof encodedHash === 'string' ? encodedHash.split('$') : [];
+  const validFormat = parts.length === 6
+    && parts[0] === 'scrypt'
+    && parts[1] === '16384'
+    && parts[2] === '8'
+    && parts[3] === '1'
+    && /^[a-f0-9]{32}$/i.test(parts[4])
+    && /^[a-f0-9]{128}$/i.test(parts[5]);
+  const salt = validFormat ? Buffer.from(parts[4], 'hex') : dummyPasswordSalt;
+  const expected = validFormat ? Buffer.from(parts[5], 'hex') : Buffer.from(dummyPasswordHash, 'hex');
+  const actual = await scryptAsync(password, salt, passwordKeyLength, scryptOptions);
+  return validFormat && crypto.timingSafeEqual(actual, expected);
 }
 
 function getChurches() {
@@ -124,6 +192,25 @@ function getAccess(email) {
     };
   }
   return { role: 'community', ministries: [], churchCodes: [] };
+}
+
+function getPasswordAccess(user) {
+  const communityAccess = { role: 'community', ministries: [], churchCodes: [] };
+  const configuredAccess = getAccess(user.email);
+
+  if (user.role === 'MIEMBRO') return communityAccess;
+  if (user.role === 'LIDER') {
+    return configuredAccess.role === 'leader' ? configuredAccess : null;
+  }
+  if (user.role === 'PASTOR') {
+    if (configuredAccess.role === 'admin') return configuredAccess;
+    return {
+      role: 'pastor',
+      ministries: [...ministries],
+      churchCodes: getChurches().map(church => church.code)
+    };
+  }
+  return communityAccess;
 }
 
 function readCookie(req, name) {
@@ -240,13 +327,15 @@ async function authenticate(req, res, next) {
         tokenHash: crypto.createHash('sha256').update(token).digest('hex'),
         revokedAt: null,
         expiresAt: { gt: new Date() },
-        user: { isActive: true }
+        user: { isActive: true, status: 'ACTIVE' }
       },
-      include: { user: { select: { id: true, email: true } } }
+      include: { user: { select: { id: true, name: true, email: true, role: true } } }
     });
     if (!session) return res.status(401).json({ error: 'La sesión expiró. Vuelve a ingresar.' });
 
-    const access = getAccess(session.user.email);
+    const access = session.authMethod === 'PASSWORD'
+      ? getPasswordAccess(session.user)
+      : getAccess(session.user.email);
     if (!access) {
       await prisma.session.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
       res.clearCookie(sessionCookieName, sessionCookieOptions(0));
@@ -262,6 +351,13 @@ async function authenticate(req, res, next) {
 function requirePastor(req, res, next) {
   if (!['pastor', 'admin'].includes(req.actor.role)) {
     return res.status(403).json({ error: 'Esta acción requiere permisos pastorales.' });
+  }
+  next();
+}
+
+function requireMember(req, res, next) {
+  if (req.actor.role !== 'community') {
+    return res.status(403).json({ error: 'Esta función está disponible para cuentas de la comunidad.' });
   }
   next();
 }
@@ -407,6 +503,124 @@ app.get('/api/auth/providers', (req, res) => {
   });
 });
 
+app.post('/api/auth/register', requireSameOrigin, authRateLimit, async (req, res, next) => {
+  let registration;
+  try {
+    registration = validateRegistration(req.body);
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message });
+  }
+
+  const token = crypto.randomBytes(32).toString('base64url');
+  const now = new Date();
+  try {
+    const passwordHash = await hashPassword(registration.password);
+    const user = await prisma.$transaction(async transaction => {
+      const createdUser = await transaction.user.create({
+        data: {
+          name: registration.name,
+          email: registration.email,
+          passwordHash,
+          role: 'MIEMBRO',
+          status: 'ACTIVE',
+          isActive: true,
+          lastLoginAt: now
+        },
+        select: { id: true, name: true, email: true, role: true }
+      });
+      await transaction.session.create({
+        data: {
+          userId: createdUser.id,
+          authMethod: 'PASSWORD',
+          tokenHash: crypto.createHash('sha256').update(token).digest('hex'),
+          ip: req.ip,
+          userAgent: req.get('user-agent')?.slice(0, 500) || null,
+          expiresAt: new Date(Date.now() + sessionLifetimeMs)
+        }
+      });
+      return createdUser;
+    });
+
+    res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
+    res.status(201).json({
+      name: user.name,
+      email: user.email,
+      role: 'community',
+      ministries: [],
+      churchCodes: [],
+      churches: []
+    });
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo electrónico.' });
+    }
+    next(error);
+  }
+});
+
+app.post('/api/auth/login', requireSameOrigin, authRateLimit, async (req, res, next) => {
+  let credentials;
+  try {
+    credentials = validateLogin(req.body);
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email: credentials.email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        passwordHash: true,
+        role: true,
+        status: true,
+        isActive: true
+      }
+    });
+    const passwordMatches = await verifyPassword(credentials.password, user?.passwordHash);
+    if (!user || !passwordMatches) {
+      return res.status(401).json({ error: 'Correo o contraseña incorrectos.' });
+    }
+    if (!user.isActive || user.status !== 'ACTIVE') {
+      return res.status(403).json({ error: 'La cuenta está inactiva. Contacta al administrador.' });
+    }
+
+    const access = getPasswordAccess(user);
+    if (!access) {
+      return res.status(403).json({ error: 'La cuenta no tiene un rol de acceso habilitado.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('base64url');
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date(), failedLogins: 0, lockedUntil: null }
+      }),
+      prisma.session.create({
+        data: {
+          userId: user.id,
+          authMethod: 'PASSWORD',
+          tokenHash: crypto.createHash('sha256').update(token).digest('hex'),
+          ip: req.ip,
+          userAgent: req.get('user-agent')?.slice(0, 500) || null,
+          expiresAt: new Date(Date.now() + sessionLifetimeMs)
+        }
+      })
+    ]);
+    res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
+    res.json({
+      name: user.name,
+      email: user.email,
+      ...access,
+      churches: getChurches().filter(church => access.churchCodes.includes(church.code))
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get('/api/auth/:provider', authRateLimit, (req, res) => {
   const provider = req.params.provider;
   const config = providerConfig(provider);
@@ -467,14 +681,28 @@ app.get('/api/auth/:provider/callback', authRateLimit, async (req, res, next) =>
     }
     const user = await prisma.user.upsert({
       where: { email: identity.email },
-      create: { email: identity.email, passwordHash: 'OAUTH_ONLY', lastLoginAt: new Date() },
-      update: { lastLoginAt: new Date(), isActive: true },
-      select: { id: true }
+      create: {
+        name: identity.name || identity.email.split('@')[0],
+        email: identity.email,
+        passwordHash: 'OAUTH_ONLY',
+        lastLoginAt: new Date()
+      },
+      update: {
+        ...(identity.name ? { name: identity.name } : {}),
+        lastLoginAt: new Date(),
+        isActive: true,
+        status: 'ACTIVE'
+      },
+      select: { id: true, status: true, isActive: true }
     });
+    if (!user.isActive || user.status !== 'ACTIVE') {
+      return res.status(403).send('La cuenta está inactiva. Contacta al administrador.');
+    }
     const token = crypto.randomBytes(32).toString('base64url');
     await prisma.session.create({
       data: {
         userId: user.id,
+        authMethod: 'OAUTH',
         tokenHash: crypto.createHash('sha256').update(token).digest('hex'),
         ip: req.ip,
         userAgent: req.get('user-agent')?.slice(0, 500) || null,
@@ -490,6 +718,7 @@ app.get('/api/auth/:provider/callback', authRateLimit, async (req, res, next) =>
 
 app.get('/api/auth/me', authenticate, (req, res) => {
   res.json({
+    name: req.actor.name,
     email: req.actor.email,
     role: req.actor.role,
     ministries: req.actor.ministries,
@@ -503,6 +732,53 @@ app.post('/api/auth/logout', requireSameOrigin, authenticate, async (req, res, n
     await prisma.session.update({ where: { id: req.actor.sessionId }, data: { revokedAt: new Date() } });
     res.clearCookie(sessionCookieName, sessionCookieOptions(0));
     res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/member/prayer-requests', authenticate, requireMember, async (req, res, next) => {
+  try {
+    const requests = await prisma.prayerRequest.findMany({
+      where: { userId: req.actor.id },
+      select: { id: true, content: true, status: true, createdAt: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ requests });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/member/devotionals', authenticate, requireMember, (req, res) => {
+  res.json({
+    devotionals: [
+      {
+        title: 'Un momento para confiar',
+        content: 'Haz una pausa, presenta tus preocupaciones en oración y recuerda que no tienes que recorrer el camino en soledad.'
+      },
+      {
+        title: 'Crecer en comunidad',
+        content: 'La fe también se fortalece al compartir, escuchar y acompañarnos con amor y esperanza.'
+      }
+    ]
+  });
+});
+
+app.post('/api/member/prayer-requests', requireSameOrigin, authenticate, requireMember, authRateLimit, async (req, res, next) => {
+  let request;
+  try {
+    request = validatePrayerRequest(req.body);
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message });
+  }
+
+  try {
+    const createdRequest = await prisma.prayerRequest.create({
+      data: { userId: req.actor.id, content: request.content },
+      select: { id: true, content: true, status: true, createdAt: true }
+    });
+    res.status(201).json({ request: createdRequest });
   } catch (error) {
     next(error);
   }
@@ -761,4 +1037,19 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, getAccess, parseLeaderAccess, validateMetrics, validateReport, validateTestimonialRating };
+module.exports = {
+  app,
+  getAccess,
+  getPasswordAccess,
+  hashPassword,
+  normalizeEmail,
+  parseLeaderAccess,
+  requireMember,
+  validateLogin,
+  validateMetrics,
+  validatePrayerRequest,
+  validateRegistration,
+  validateReport,
+  validateTestimonialRating,
+  verifyPassword
+};
