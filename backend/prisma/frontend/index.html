@@ -700,33 +700,49 @@
   </main>
 
   <section id="memberDashboard" class="member-dashboard" aria-labelledby="memberDashboardTitle" hidden>
-    <div class="member-dashboard-header">
+    <header class="member-dashboard-header member-welcome-card">
       <div>
         <p class="member-eyebrow">Espacio privado de la comunidad</p>
-        <h2 id="memberDashboardTitle">Tu perfil</h2>
-        <p>Bienvenido/a, <strong id="memberWelcomeName"></strong> <span id="memberEmail"></span></p>
+        <h2 id="memberDashboardTitle">¡Bienvenido/a, <span id="memberWelcomeName"></span>!</h2>
+        <p>Este es tu espacio para crecer, compartir y mantenerte conectado/a.</p>
+        <span id="memberEmail" class="member-account-email"></span>
       </div>
       <button id="memberLogoutButton" class="member-logout-button" type="button">Cerrar sesión</button>
-    </div>
+    </header>
 
     <div class="member-dashboard-grid">
       <section class="member-panel" aria-labelledby="prayerRequestTitle">
-        <h3 id="prayerRequestTitle">Peticiones de oración privadas</h3>
+        <p class="member-eyebrow">Acompañamiento</p>
+        <h3 id="prayerRequestTitle">Peticiones de Oración</h3>
         <p>Solo tú puedes consultar las peticiones enviadas desde esta cuenta.</p>
         <form id="prayerRequestForm" class="prayer-request-form">
           <label for="prayerRequestContent">¿Por qué te gustaría que oremos?</label>
           <textarea id="prayerRequestContent" name="content" rows="5" minlength="10" maxlength="4000" required></textarea>
-          <button type="submit" class="btn-primary-peace">Enviar petición privada</button>
+          <button type="submit" class="btn-primary-peace">Enviar petición</button>
         </form>
         <p id="prayerRequestMessage" class="member-feedback" role="status" aria-live="polite"></p>
         <ul id="prayerRequestList" class="prayer-request-list" aria-live="polite"></ul>
       </section>
 
       <section class="member-panel member-devotionals" aria-labelledby="memberDevotionalsTitle">
-        <p class="member-eyebrow">Contenido para miembros</p>
-        <h3 id="memberDevotionalsTitle">Devocionales</h3>
+        <p class="member-eyebrow">Lecturas y materiales</p>
+        <h3 id="memberDevotionalsTitle">Devocionales y Recursos</h3>
         <p id="memberDevotionalMessage" class="member-feedback" role="status" aria-live="polite"></p>
         <div id="memberDevotionalList"></div>
+      </section>
+
+      <section class="member-panel member-events-panel" aria-labelledby="memberEventsTitle">
+        <div class="member-section-heading">
+          <div>
+            <p class="member-eyebrow">Conectemos</p>
+            <h3 id="memberEventsTitle">Próximos Eventos</h3>
+          </div>
+          <a class="member-events-link" href="#eventos">Ver agenda pública</a>
+        </div>
+        <p id="memberEventsMessage" class="member-feedback" role="status" aria-live="polite"></p>
+        <div id="memberEventsList" class="member-events-list" aria-live="polite">
+          <p class="events-empty">Cargando próximos eventos...</p>
+        </div>
       </section>
     </div>
   </section>

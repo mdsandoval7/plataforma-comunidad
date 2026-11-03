@@ -30,6 +30,7 @@ let currentMinistryCode = null;
 let currentChurchCode = null;
 let availableProviders = null;
 let ministryReports = [];
+const memberEventAttendance = new Set();
 
 async function apiRequest(url, options = {}) {
   const response = await fetch(url, {
@@ -333,6 +334,58 @@ async function loadMemberDevotionals() {
     }
   } catch (error) {
     showMessage('memberDevotionalMessage', error.message, true);
+  }
+}
+
+async function loadMemberEvents() {
+  const list = document.getElementById('memberEventsList');
+  try {
+    const events = await apiRequest('/api/public/events');
+    const upcomingEvents = events.filter(event => event.meetingAt && new Date(event.meetingAt) >= new Date());
+    if (!upcomingEvents.length) {
+      renderEmpty(list, 'Por ahora no hay próximos eventos publicados.', 'member-events-empty');
+      return;
+    }
+
+    const cards = upcomingEvents.map(event => {
+      const card = document.createElement('article');
+      card.className = 'member-event-card';
+
+      const title = document.createElement('h4');
+      title.textContent = event.title;
+      const date = document.createElement('p');
+      date.className = 'member-event-date';
+      date.textContent = formatDate(event.meetingAt);
+      const details = document.createElement('p');
+      details.textContent = [
+        ministryLabels[event.ministryCode] || 'Actividad de la iglesia',
+        event.churchName,
+        event.location
+      ].filter(Boolean).join(' · ');
+      card.append(title, date, details);
+
+      if (event.publicDescription) {
+        const description = document.createElement('p');
+        description.className = 'member-event-description';
+        description.textContent = event.publicDescription;
+        card.append(description);
+      }
+
+      const button = document.createElement('button');
+      button.className = 'member-rsvp-button';
+      button.type = 'button';
+      button.dataset.eventId = event.id;
+      button.setAttribute('aria-pressed', String(memberEventAttendance.has(event.id)));
+      button.textContent = memberEventAttendance.has(event.id)
+        ? 'Asistencia confirmada · Cancelar'
+        : 'Confirmar asistencia';
+      card.append(button);
+      return card;
+    });
+
+    list.replaceChildren(...cards);
+  } catch (error) {
+    renderEmpty(list, error.message, 'member-events-empty');
   }
 }
 
@@ -648,7 +701,7 @@ async function showMemberDashboard(actor) {
   document.getElementById('memberEmail').textContent = actor.email;
   const dashboard = document.getElementById('memberDashboard');
   dashboard.hidden = false;
-  await Promise.all([loadPrayerRequests(), loadMemberDevotionals()]);
+  await Promise.all([loadPrayerRequests(), loadMemberDevotionals(), loadMemberEvents()]);
   dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -795,6 +848,21 @@ function attachEventHandlers() {
   document.getElementById('logoutButton').addEventListener('click', logout);
   document.getElementById('memberLogoutButton').addEventListener('click', logout);
   document.getElementById('prayerRequestForm').addEventListener('submit', submitPrayerRequest);
+  document.getElementById('memberEventsList').addEventListener('click', event => {
+    const button = event.target.closest('[data-event-id]');
+    if (!button) return;
+    const confirmed = memberEventAttendance.has(button.dataset.eventId);
+    if (confirmed) {
+      memberEventAttendance.delete(button.dataset.eventId);
+    } else {
+      memberEventAttendance.add(button.dataset.eventId);
+    }
+    button.setAttribute('aria-pressed', String(!confirmed));
+    button.textContent = confirmed ? 'Confirmar asistencia' : 'Asistencia confirmada · Cancelar';
+    showMessage('memberEventsMessage', confirmed
+      ? 'Se canceló tu confirmación de asistencia.'
+      : '¡Tu asistencia quedó confirmada!');
+  });
   document.getElementById('communityLogoutButton').addEventListener('click', logout);
   const menuToggle = document.querySelector('.nav-toggle');
   const primaryMenu = document.getElementById('primaryMenu');

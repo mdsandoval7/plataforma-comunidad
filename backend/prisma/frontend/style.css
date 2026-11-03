@@ -26,6 +26,10 @@
   box-shadow: 0 18px 48px rgba(15, 32, 67, 0.1);
 }
 
+.member-dashboard[hidden] {
+  display: none;
+}
+
 .member-dashboard-header {
   display: flex;
   align-items: flex-start;
@@ -34,10 +38,22 @@
   margin-bottom: 26px;
 }
 
+.member-welcome-card {
+  align-items: center;
+  padding: clamp(22px, 4vw, 36px);
+  border: 1px solid #dbeafe;
+  border-radius: 18px;
+  background: linear-gradient(115deg, #eff6ff, #fff 72%);
+}
+
 .member-dashboard-header h2 {
   margin: 4px 0 8px;
   color: #0f2043;
   font-size: clamp(1.7rem, 3vw, 2.3rem);
+}
+
+.member-dashboard-header h2 span {
+  color: #2563eb;
 }
 
 .member-dashboard-header p,
@@ -46,8 +62,9 @@
   line-height: 1.6;
 }
 
-.member-dashboard-header #memberEmail {
-  margin-left: 8px;
+.member-dashboard-header .member-account-email {
+  display: inline-block;
+  margin-top: 5px;
   color: #64748b;
   font-size: 0.92rem;
 }
@@ -77,6 +94,107 @@
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
   gap: 20px;
+}
+
+.member-events-panel {
+  grid-column: 1 / -1;
+}
+
+.member-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.member-section-heading h3 {
+  margin-top: 4px;
+}
+
+.member-events-link {
+  color: #1d4ed8;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.member-events-link:hover {
+  text-decoration: underline;
+}
+
+.member-events-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 14px;
+}
+
+.member-event-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 18px;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.member-event-card h4 {
+  margin: 0 0 8px;
+  color: #0f2043;
+  font-size: 1.05rem;
+}
+
+.member-event-card p {
+  margin: 0 0 8px;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.member-event-card .member-event-date {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.member-event-card .member-event-description {
+  margin-top: 3px;
+}
+
+.member-rsvp-button {
+  margin-top: auto;
+  padding: 10px 14px;
+  border: 1px solid #2563eb;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-size: 0.87rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.member-rsvp-button[aria-pressed="true"] {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.member-rsvp-button:focus-visible,
+.member-logout-button:focus-visible,
+.member-events-link:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 3px;
+}
+
+.member-events-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 20px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  color: #64748b;
+  text-align: center;
 }
 
 .member-panel {
@@ -196,8 +314,21 @@
     flex-direction: column;
   }
 
+  .member-welcome-card {
+    align-items: flex-start;
+  }
+
   .member-dashboard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .member-events-panel {
+    grid-column: auto;
+  }
+
+  .member-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .member-panel {
