@@ -1,9 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  app,
   getAccess,
   getPasswordAccess,
   hashPassword,
+  isConfiguredOAuthCredential,
   normalizeEmail,
   parseLeaderAccess,
   requireMember,
@@ -15,6 +17,25 @@ const {
   validateTestimonialRating,
   verifyPassword
 } = require('../server');
+
+test('testimonial submission URL is handled by the Express API', async t => {
+  const server = app.listen(0, '127.0.0.1');
+  t.after(() => new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+  }));
+  await new Promise((resolve, reject) => {
+    server.once('listening', resolve);
+    server.once('error', reject);
+  });
+
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/public/testimonials`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Ana', rating: 5, imageUrl: '', content: 'Mi testimonio de prueba' })
+  });
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), { error: 'Origen no autorizado.' });
+});
 
 test('leader access is exact and restricted to the configured ministry', () => {
   const previous = process.env.LEADER_ACCESS;
@@ -86,6 +107,13 @@ test('email registration and login inputs are normalized and validated', () => {
     email: 'not-an-email',
     password: 'correct-password'
   }), { status: 400 });
+});
+
+test('OAuth credentials reject template placeholders', () => {
+  assert.equal(isConfiguredOAuthCredential('real-client-secret-value'), true);
+  assert.equal(isConfiguredOAuthCredential(''), false);
+  assert.equal(isConfiguredOAuthCredential('PEGA_AQUI_TU_SECRETO_DE_CLIENTE'), false);
+  assert.equal(isConfiguredOAuthCredential('YOUR_CLIENT_SECRET'), false);
 });
 
 test('passwords are stored as scrypt hashes and checked safely', async () => {

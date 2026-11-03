@@ -4,6 +4,8 @@ const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 const path = require('node:path');
 const express = require('express');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { PrismaClient } = require('@prisma/client');
 
 const app = express();
@@ -51,6 +53,7 @@ if (!['http:', 'https:'].includes(configuredBaseUrl.protocol)) {
 }
 
 app.disable('x-powered-by');
+app.use(passport.initialize());
 app.use((req, res, next) => {
   res.set({
     'Content-Security-Policy': "default-src 'self'; img-src 'self' https: data:; media-src https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' https://unpkg.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
@@ -266,7 +269,7 @@ function providerConfig(provider) {
   if (provider === 'google') {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    return clientId && clientSecret ? {
+    return isConfiguredOAuthCredential(clientId) && isConfiguredOAuthCredential(clientSecret) ? {
       clientId,
       clientSecret,
       callbackUrl,
@@ -291,6 +294,64 @@ function providerConfig(provider) {
   }
   return null;
 }
+
+function isConfiguredOAuthCredential(value) {
+  return typeof value === 'string'
+    && value.length > 0
+    && !/^(?:PEGA_AQUI|YOUR_|CHANGE_ME|PLACEHOLDER)/i.test(value);
+}
+
+function configureGooglePassport() {
+  const config = providerConfig('google');
+  if (!config) return false;
+
+  passport.use('google', new GoogleStrategy({
+    clientID: config.clientId,
+    clientSecret: config.clientSecret,
+    callbackURL: config.callbackUrl,
+    passReqToCallback: true
+  }, async (req, accessToken, refreshToken, profile, done) => {
+    try {
+      const email = normalizeEmail(profile.emails?.find(item => item.value)?.value);
+      if (profile._json?.email_verified !== true) {
+        return done(null, false, { message: 'Google no confirmó que el correo esté verificado.' });
+      }
+      const state = verifyState(readCookie(req, oauthCookieName));
+      if (!state || state.provider !== 'google') {
+        return done(null, false, { message: 'La solicitud de acceso expiró o no es válida.' });
+      }
+      const access = getAccess(email);
+      if (
+        (state.audience === 'admin' && access.role !== 'admin')
+        || (state.audience === 'leadership' && access.role === 'community')
+      ) {
+        return done(null, false, { message: 'El correo autenticado no está autorizado para este acceso.' });
+      }
+
+      const user = await prisma.user.upsert({
+        where: { email },
+        create: {
+          name: profile.displayName || email.split('@')[0],
+          email,
+          passwordHash: 'OAUTH_ONLY',
+          role: 'MIEMBRO',
+          lastLoginAt: new Date()
+        },
+        update: {
+          ...(profile.displayName ? { name: profile.displayName } : {}),
+          lastLoginAt: new Date()
+        },
+        select: { id: true, name: true, email: true, role: true, status: true, isActive: true }
+      });
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
+  }));
+  return true;
+}
+
+const googlePassportConfigured = configureGooglePassport();
 
 function authRateLimit(req, res, next) {
   const now = Date.now();
@@ -621,6 +682,72 @@ app.post('/api/auth/login', requireSameOrigin, authRateLimit, async (req, res, n
   }
 });
 
+app.get('/api/auth/google', authRateLimit, (req, res, next) => {
+  if (!googlePassportConfigured) {
+    return res.status(503).send('Este proveedor de acceso aún no está configurado.');
+  }
+  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
+    return res.status(503).send('Falta configurar SESSION_SECRET con al menos 32 caracteres.');
+  }
+  const audience = ['admin', 'community', 'leadership'].includes(req.query.audience)
+    ? req.query.audience
+    : 'leadership';
+  const state = crypto.randomBytes(32).toString('base64url');
+  res.cookie(oauthCookieName, signState({
+    provider: 'google',
+    audience,
+    state,
+    expiresAt: Date.now() + 10 * 60_000
+  }), {
+    ...sessionCookieOptions(10 * 60_000),
+    path: '/api/auth'
+  });
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    session: false,
+    state
+  })(req, res, next);
+});
+
+app.get('/api/auth/google/callback', authRateLimit, (req, res, next) => {
+  const state = verifyState(readCookie(req, oauthCookieName));
+  res.clearCookie(oauthCookieName, { ...sessionCookieOptions(0), path: '/api/auth' });
+  if (!googlePassportConfigured || !state || state.provider !== 'google' || state.state !== req.query.state) {
+    return res.status(400).send('La solicitud de acceso expiró o no es válida. Intenta de nuevo.');
+  }
+  if (req.query.error || typeof req.query.code !== 'string') {
+    return res.status(401).send('No fue posible completar el acceso con Google.');
+  }
+
+  passport.authenticate('google', { session: false }, async (error, user, info) => {
+    if (error) return next(error);
+    if (!user) {
+      return res.status(403).send(info?.message || 'No fue posible autenticar la cuenta de Google.');
+    }
+    if (!user.isActive || user.status !== 'ACTIVE') {
+      return res.status(403).send('La cuenta está inactiva. Contacta al administrador.');
+    }
+
+    try {
+      const token = crypto.randomBytes(32).toString('base64url');
+      await prisma.session.create({
+        data: {
+          userId: user.id,
+          authMethod: 'OAUTH',
+          tokenHash: crypto.createHash('sha256').update(token).digest('hex'),
+          ip: req.ip,
+          userAgent: req.get('user-agent')?.slice(0, 500) || null,
+          expiresAt: new Date(Date.now() + sessionLifetimeMs)
+        }
+      });
+      res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
+      res.redirect(state.audience === 'community' ? '/?community=welcome' : '/#adminDashboard');
+    } catch (sessionError) {
+      next(sessionError);
+    }
+  })(req, res, next);
+});
+
 app.get('/api/auth/:provider', authRateLimit, (req, res) => {
   const provider = req.params.provider;
   const config = providerConfig(provider);
@@ -685,13 +812,12 @@ app.get('/api/auth/:provider/callback', authRateLimit, async (req, res, next) =>
         name: identity.name || identity.email.split('@')[0],
         email: identity.email,
         passwordHash: 'OAUTH_ONLY',
+        role: 'MIEMBRO',
         lastLoginAt: new Date()
       },
       update: {
         ...(identity.name ? { name: identity.name } : {}),
-        lastLoginAt: new Date(),
-        isActive: true,
-        status: 'ACTIVE'
+        lastLoginAt: new Date()
       },
       select: { id: true, status: true, isActive: true }
     });
@@ -1042,6 +1168,7 @@ module.exports = {
   getAccess,
   getPasswordAccess,
   hashPassword,
+  isConfiguredOAuthCredential,
   normalizeEmail,
   parseLeaderAccess,
   requireMember,

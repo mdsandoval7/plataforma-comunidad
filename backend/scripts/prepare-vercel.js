@@ -9,8 +9,7 @@ const assets = [
   'Logo.png',
   'favicon.png',
   'style.css',
-  'hero-jesus-2024.jpg',
-  '3195394-hd_1920_1080_25fps.mp4'
+  'hero-jesus-2024.jpg'
 ];
 const imageDirectories = ['pastor', 'pastora'];
 

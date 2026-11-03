@@ -235,6 +235,13 @@ async function startAuth(provider, audience = 'leadership') {
     : audience === 'community'
       ? 'generalAuthMessage'
       : 'leaderAuthMessage';
+  if (provider === 'google') {
+    const backendUrl = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+      ? 'http://localhost:3000'
+      : window.location.origin;
+    window.location.assign(`${backendUrl}/api/auth/google?audience=${encodeURIComponent(audience)}`);
+    return;
+  }
   try {
     if (!availableProviders) {
       availableProviders = await apiRequest('/api/auth/providers');

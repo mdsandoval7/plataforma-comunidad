@@ -16,7 +16,7 @@
 
     /* HERO CON IMAGEN DE FONDO */
     .hero-header { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; color: #ffffff; overflow: hidden; background-color: #0f2043; }
-    .hero-background-image { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; object-fit: cover; object-position: center 46%; }
+    .hero-background-video { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; object-fit: cover; object-position: center 46%; pointer-events: none; }
     .hero-image-overlay { position: absolute; inset: 0; width: 100%; height: 100%; background: linear-gradient(180deg, rgba(15, 32, 67, 0.45) 0%, rgba(15, 32, 67, 0.85) 100%); z-index: 2; }
 
     /* NAVBAR PRINCIPAL */
@@ -281,8 +281,8 @@
 
   <!-- HERO PRINCIPAL -->
   <header class="hero-header" id="inicio">
-    <video class="hero-background-image" autoplay muted loop playsinline preload="auto" aria-hidden="true">
-      <source src="./3195394-hd_1920_1080_25fps.mp4" type="video/mp4">
+    <video class="hero-background-video" autoplay loop muted playsinline preload="auto" aria-hidden="true" disablepictureinpicture>
+      <source src="https://videos.pexels.com/video-files/3794069/3794069-hd_1920_1080_30fps.mp4" type="video/mp4">
     </video>
     <div class="hero-image-overlay"></div>
 
