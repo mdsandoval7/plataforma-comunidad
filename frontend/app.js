@@ -604,7 +604,50 @@ async function logout() {
   }
 }
 
+function initializePastorCarousel() {
+  const carousel = document.querySelector('[data-pastor-carousel]');
+  if (!carousel) return;
+
+  const slides = [...carousel.querySelectorAll('.pastor-carousel-image')];
+  const previousButton = carousel.querySelector('[data-pastor-previous]');
+  const nextButton = carousel.querySelector('[data-pastor-next]');
+  const status = carousel.querySelector('[data-pastor-carousel-status]');
+  if (slides.length < 2 || !previousButton || !nextButton) return;
+
+  let currentIndex = 0;
+  let rotationInterval;
+
+  function showSlide(index, announce = false) {
+    currentIndex = (index + slides.length) % slides.length;
+    slides.forEach((slide, slideIndex) => {
+      const isActive = slideIndex === currentIndex;
+      slide.classList.toggle('is-active', isActive);
+      slide.setAttribute('aria-hidden', String(!isActive));
+    });
+    if (announce && status) status.textContent = `Fotografía ${currentIndex + 1} de ${slides.length}`;
+  }
+
+  function restartRotation() {
+    window.clearInterval(rotationInterval);
+    rotationInterval = window.setInterval(() => {
+      if (!document.hidden) showSlide(currentIndex + 1);
+    }, 4000);
+  }
+
+  previousButton.addEventListener('click', () => {
+    showSlide(currentIndex - 1, true);
+    restartRotation();
+  });
+  nextButton.addEventListener('click', () => {
+    showSlide(currentIndex + 1, true);
+    restartRotation();
+  });
+
+  restartRotation();
+}
+
 function attachEventHandlers() {
+  initializePastorCarousel();
   document.getElementById('feedbackForm').addEventListener('submit', submitTestimonial);
   document.getElementById('reportForm').addEventListener('submit', saveReport);
   document.getElementById('metricsForm').addEventListener('submit', saveMetrics);

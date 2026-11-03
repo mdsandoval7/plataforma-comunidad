@@ -132,6 +132,14 @@
     .pastors-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 30px; }
     .pastor-box { background: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; padding: 40px 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.03); transition: all 0.3s; }
     .pastor-box:hover { transform: translateY(-6px); border-color: #2563eb; box-shadow: 0 15px 35px rgba(37,99,235,0.1); }
+    .pastor-carousel { width: min(100%, 360px); margin: 0 auto 22px; }
+    .pastor-carousel-frame { position: relative; width: 100%; aspect-ratio: 4 / 5; overflow: hidden; border: 4px solid #eff6ff; border-radius: 18px; background: #e2e8f0; }
+    .pastor-carousel-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .65s ease; }
+    .pastor-carousel-image.is-active { z-index: 1; opacity: 1; }
+    .pastor-carousel-controls { display: flex; justify-content: center; gap: 12px; margin-top: 12px; }
+    .pastor-carousel-controls button { min-height: 36px; padding: 7px 14px; border: 1px solid #bfdbfe; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; transition: background .2s, color .2s; }
+    .pastor-carousel-controls button:hover { background: #2563eb; color: #fff; }
+    .pastor-carousel-controls button:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
     .pastor-avatar-large { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid #eff6ff; margin-bottom: 18px; }
     .pastor-box h3 { color: #0f2043; font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; }
     .pastor-role { display: inline-block; color: #2563eb; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; margin-bottom: 14px; background: #eff6ff; padding: 4px 14px; border-radius: 20px; }
@@ -271,7 +279,9 @@
 
   <!-- HERO PRINCIPAL -->
   <header class="hero-header" id="inicio">
-    <img class="hero-background-image" src="/hero-jesus-2024.jpg" alt="" aria-hidden="true" fetchpriority="high" decoding="async">
+    <video class="hero-background-image" autoplay muted loop playsinline preload="auto" aria-hidden="true">
+      <source src="./3195394-hd_1920_1080_25fps.mp4" type="video/mp4">
+    </video>
     <div class="hero-image-overlay"></div>
 
     <nav class="navbar-transparent">
@@ -526,7 +536,21 @@
 
       <div class="pastors-container">
         <div class="pastor-box">
-          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&amp;fit=crop&amp;w=600&amp;q=80" class="pastor-avatar-large" alt="Retrato ilustrativo de liderazgo pastoral" loading="lazy">
+          <div class="pastor-carousel" data-pastor-carousel role="region" aria-label="Carrusel de fotografías del Pastor Fundador" aria-roledescription="carrusel">
+            <div class="pastor-carousel-frame">
+              <img class="pastor-carousel-image is-active" src="./assets/pastor-1.jpeg" alt="Pastor fundador, fotografía 1 de 6" decoding="async">
+              <img class="pastor-carousel-image" src="./assets/pastor-2.jpeg" alt="Pastor fundador, fotografía 2 de 6" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image" src="./assets/pastor-3.jpeg" alt="Pastor fundador, fotografía 3 de 6" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image" src="./assets/pastor-4.jpeg" alt="Pastor fundador, fotografía 4 de 6" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image" src="./assets/pastor-5.jpeg" alt="Pastor fundador, fotografía 5 de 6" decoding="async" aria-hidden="true">
+              <img class="pastor-carousel-image" src="./assets/pastor-6.jpeg" alt="Pastor fundador, fotografía 6 de 6" decoding="async" aria-hidden="true">
+            </div>
+            <div class="pastor-carousel-controls">
+              <button type="button" data-pastor-previous aria-label="Mostrar fotografía anterior del Pastor Fundador">Anterior</button>
+              <button type="button" data-pastor-next aria-label="Mostrar fotografía siguiente del Pastor Fundador">Siguiente</button>
+            </div>
+            <span class="sr-only" data-pastor-carousel-status aria-live="polite" aria-atomic="true">Fotografía 1 de 6</span>
+          </div>
           <h3>Pastores Fundadores</h3>
           <span class="pastor-role">ICAEP C-Camelot | Soledad</span>
           <p>"Guiando vidas hacia su propósito eterno, edificando una casa de restauración y avivamiento."</p>
