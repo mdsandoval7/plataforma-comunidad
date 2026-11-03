@@ -20,6 +20,8 @@ enum AccountRole {
   MIEMBRO
   LIDER
   PASTOR
+  DEVELOPER
+  SUPER_DEVELOPER
 }
 
 enum AccountStatus {

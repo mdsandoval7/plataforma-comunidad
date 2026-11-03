@@ -13,6 +13,7 @@ const prisma = new PrismaClient();
 const frontendPath = path.join(__dirname, 'prisma', 'frontend');
 const sessionCookieName = 'ccicaep_session';
 const oauthCookieName = 'ccicaep_oauth';
+const superDeveloperEmail = 'sandoval97825@gmail.com';
 const sessionLifetimeMs = 8 * 60 * 60 * 1000;
 const passwordKeyLength = 64;
 const scryptAsync = promisify(crypto.scrypt);
@@ -201,6 +202,10 @@ function getPasswordAccess(user) {
   const communityAccess = { role: 'community', ministries: [], churchCodes: [] };
   const configuredAccess = getAccess(user.email);
 
+  if (user.email.toLowerCase() === superDeveloperEmail || user.role === 'SUPER_DEVELOPER') return null;
+  if (user.role === 'DEVELOPER') {
+    return { role: 'developer', ministries: [], churchCodes: [] };
+  }
   if (user.role === 'MIEMBRO') return communityAccess;
   if (user.role === 'LIDER') {
     return configuredAccess.role === 'leader' ? configuredAccess : null;
@@ -214,6 +219,36 @@ function getPasswordAccess(user) {
     };
   }
   return communityAccess;
+}
+
+function getOAuthAccess(user) {
+  const email = user.email.toLowerCase();
+  const churchCodes = getChurches().map(church => church.code);
+
+  if (email === superDeveloperEmail && user.role === 'SUPER_DEVELOPER') {
+    return { role: 'superDeveloper', ministries: [...ministries], churchCodes };
+  }
+  if (user.role === 'SUPER_DEVELOPER') return null;
+  if (user.role === 'DEVELOPER') {
+    return { role: 'developer', ministries: [], churchCodes: [] };
+  }
+  if (user.role === 'PASTOR') {
+    return { role: 'pastor', ministries: [...ministries], churchCodes };
+  }
+  if (user.role === 'LIDER') {
+    const configuredAccess = getAccess(email);
+    return configuredAccess.role === 'leader'
+      ? configuredAccess
+      : { role: 'leader', ministries: [], churchCodes: [] };
+  }
+  return getAccess(email);
+}
+
+function canAccessAudience(access, audience) {
+  if (!access) return false;
+  if (audience === 'admin') return ['superDeveloper', 'developer', 'admin'].includes(access.role);
+  if (audience === 'leadership') return !['community', 'developer'].includes(access.role);
+  return true;
 }
 
 function readCookie(req, name) {
@@ -320,11 +355,22 @@ function configureGooglePassport() {
       if (!state || state.provider !== 'google') {
         return done(null, false, { message: 'La solicitud de acceso expiró o no es válida.' });
       }
-      const access = getAccess(email);
-      if (
-        (state.audience === 'admin' && access.role !== 'admin')
-        || (state.audience === 'leadership' && access.role === 'community')
-      ) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, name: true, email: true, role: true, status: true, isActive: true }
+      });
+      if (existingUser && (!existingUser.isActive || existingUser.status !== 'ACTIVE')) {
+        return done(null, false, { message: 'La cuenta está inactiva. Contacta al administrador.' });
+      }
+      const account = email === superDeveloperEmail ? {
+        email,
+        role: 'SUPER_DEVELOPER'
+      } : existingUser || {
+        email,
+        role: 'MIEMBRO'
+      };
+      const access = getOAuthAccess(account);
+      if (!canAccessAudience(access, state.audience)) {
         return done(null, false, { message: 'El correo autenticado no está autorizado para este acceso.' });
       }
 
@@ -334,11 +380,12 @@ function configureGooglePassport() {
           name: profile.displayName || email.split('@')[0],
           email,
           passwordHash: 'OAUTH_ONLY',
-          role: 'MIEMBRO',
+          role: email === superDeveloperEmail ? 'SUPER_DEVELOPER' : 'MIEMBRO',
           lastLoginAt: new Date()
         },
         update: {
           ...(profile.displayName ? { name: profile.displayName } : {}),
+          ...(email === superDeveloperEmail ? { role: 'SUPER_DEVELOPER' } : {}),
           lastLoginAt: new Date()
         },
         select: { id: true, name: true, email: true, role: true, status: true, isActive: true }
@@ -396,7 +443,7 @@ async function authenticate(req, res, next) {
 
     const access = session.authMethod === 'PASSWORD'
       ? getPasswordAccess(session.user)
-      : getAccess(session.user.email);
+      : getOAuthAccess(session.user);
     if (!access) {
       await prisma.session.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
       res.clearCookie(sessionCookieName, sessionCookieOptions(0));
@@ -410,8 +457,29 @@ async function authenticate(req, res, next) {
 }
 
 function requirePastor(req, res, next) {
-  if (!['pastor', 'admin'].includes(req.actor.role)) {
+  if (!['pastor', 'admin', 'superDeveloper'].includes(req.actor.role)) {
     return res.status(403).json({ error: 'Esta acción requiere permisos pastorales.' });
+  }
+  next();
+}
+
+function requireDeveloper(req, res, next) {
+  if (!['developer', 'superDeveloper'].includes(req.actor.role)) {
+    return res.status(403).json({ error: 'Esta ruta está reservada a desarrolladores autorizados.' });
+  }
+  next();
+}
+
+function requireSuperDeveloper(req, res, next) {
+  if (req.actor.role !== 'superDeveloper' || req.actor.email.toLowerCase() !== superDeveloperEmail) {
+    return res.status(403).json({ error: 'Solo el SUPER_DEVELOPER puede gestionar desarrolladores.' });
+  }
+  next();
+}
+
+function requireChurchLeadership(req, res, next) {
+  if (!['pastor', 'leader'].includes(req.actor.role)) {
+    return res.status(403).json({ error: 'Esta ruta está reservada a pastores y líderes.' });
   }
   next();
 }
@@ -421,6 +489,13 @@ function requireMember(req, res, next) {
     return res.status(403).json({ error: 'Esta función está disponible para cuentas de la comunidad.' });
   }
   next();
+}
+
+function sendProtectedInterface(req, res, next) {
+  res.set('Cache-Control', 'private, no-store');
+  res.sendFile(path.join(frontendPath, 'index.html'), error => {
+    if (error) next(error);
+  });
 }
 
 function canAccessMinistry(actor, code, churchCode = defaultChurchCode) {
@@ -570,6 +645,9 @@ app.post('/api/auth/register', requireSameOrigin, authRateLimit, async (req, res
     registration = validateRegistration(req.body);
   } catch (error) {
     return res.status(error.status || 400).json({ error: error.message });
+  }
+  if (registration.email === superDeveloperEmail) {
+    return res.status(403).json({ error: 'Esta cuenta debe autenticarse con Google y un correo verificado.' });
   }
 
   const token = crypto.randomBytes(32).toString('base64url');
@@ -741,7 +819,17 @@ app.get('/api/auth/google/callback', authRateLimit, (req, res, next) => {
         }
       });
       res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
-      res.redirect(state.audience === 'community' ? '/?community=welcome' : '/#adminDashboard');
+      const access = getOAuthAccess(user);
+      if (['superDeveloper', 'developer'].includes(access?.role)) {
+        return res.redirect('/admin/developer-panel.html');
+      }
+      if (['PASTOR', 'LIDER'].includes(user.role) || ['pastor', 'leader'].includes(access?.role)) {
+        return res.redirect('/admin/church-dashboard.html');
+      }
+      if (access?.role === 'admin') {
+        return res.redirect('/#adminDashboard');
+      }
+      res.redirect('/dashboard.html');
     } catch (sessionError) {
       next(sessionError);
     }
@@ -799,11 +887,15 @@ app.get('/api/auth/:provider/callback', authRateLimit, async (req, res, next) =>
 
   try {
     const identity = await fetchProviderIdentity(provider, config, req.query.code, signedState.codeVerifier);
-    const access = getAccess(identity.email);
-    if (
-      (signedState.audience === 'admin' && access.role !== 'admin')
-      || (signedState.audience === 'leadership' && access.role === 'community')
-    ) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: identity.email },
+      select: { id: true, name: true, email: true, role: true, status: true, isActive: true }
+    });
+    if (existingUser && (!existingUser.isActive || existingUser.status !== 'ACTIVE')) {
+      return res.status(403).send('La cuenta está inactiva. Contacta al administrador.');
+    }
+    const access = getOAuthAccess(existingUser || { email: identity.email, role: 'MIEMBRO' });
+    if (!canAccessAudience(access, signedState.audience)) {
       return res.status(403).send('El correo autenticado no está autorizado para este acceso.');
     }
     const user = await prisma.user.upsert({
@@ -819,7 +911,7 @@ app.get('/api/auth/:provider/callback', authRateLimit, async (req, res, next) =>
         ...(identity.name ? { name: identity.name } : {}),
         lastLoginAt: new Date()
       },
-      select: { id: true, status: true, isActive: true }
+      select: { id: true, name: true, email: true, role: true, status: true, isActive: true }
     });
     if (!user.isActive || user.status !== 'ACTIVE') {
       return res.status(403).send('La cuenta está inactiva. Contacta al administrador.');
@@ -836,7 +928,14 @@ app.get('/api/auth/:provider/callback', authRateLimit, async (req, res, next) =>
       }
     });
     res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
-    res.redirect(signedState.audience === 'community' ? '/?community=welcome' : '/#adminDashboard');
+    if (['superDeveloper', 'developer'].includes(access.role)) {
+      return res.redirect('/admin/developer-panel.html');
+    }
+    if (['PASTOR', 'LIDER'].includes(user.role) || ['pastor', 'leader'].includes(access.role)) {
+      return res.redirect('/admin/church-dashboard.html');
+    }
+    if (access.role === 'admin') return res.redirect('/#adminDashboard');
+    res.redirect('/dashboard.html');
   } catch (error) {
     next(error);
   }
@@ -862,6 +961,106 @@ app.post('/api/auth/logout', requireSameOrigin, authenticate, async (req, res, n
     next(error);
   }
 });
+
+app.get('/api/developer/developers', authenticate, requireDeveloper, async (req, res, next) => {
+  try {
+    const developers = await prisma.user.findMany({
+      where: { role: 'DEVELOPER' },
+      select: { id: true, name: true, email: true, role: true },
+      orderBy: { email: 'asc' }
+    });
+    res.json({
+      developers,
+      canManage: req.actor.role === 'superDeveloper' && req.actor.email.toLowerCase() === superDeveloperEmail
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/developer/developers', requireSameOrigin, authenticate, requireSuperDeveloper, async (req, res, next) => {
+  let email;
+  try {
+    email = normalizeEmail(req.body?.email);
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message });
+  }
+  if (email === superDeveloperEmail) {
+    return res.status(400).json({ error: 'La cuenta SUPER_DEVELOPER no puede agregarse como desarrollador delegado.' });
+  }
+
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+  if (name.length > 100) {
+    return res.status(400).json({ error: 'El nombre no puede superar 100 caracteres.' });
+  }
+
+  try {
+    const existing = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, role: true }
+    });
+    if (existing?.role === 'SUPER_DEVELOPER') {
+      return res.status(409).json({ error: 'No se puede modificar la cuenta SUPER_DEVELOPER.' });
+    }
+    if (existing && !['MIEMBRO', 'DEVELOPER'].includes(existing.role)) {
+      return res.status(409).json({ error: 'Solo se pueden asignar desarrolladores a cuentas miembro o ya delegadas.' });
+    }
+
+    const developer = await prisma.user.upsert({
+      where: { email },
+      create: {
+        name: name || email.split('@')[0],
+        email,
+        passwordHash: 'OAUTH_ONLY',
+        role: 'DEVELOPER'
+      },
+      update: {
+        role: 'DEVELOPER',
+        ...(name ? { name } : {})
+      },
+      select: { id: true, name: true, email: true, role: true }
+    });
+    res.status(201).json(developer);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/developer/developers/:id', requireSameOrigin, authenticate, requireSuperDeveloper, async (req, res, next) => {
+  if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(req.params.id)) {
+    return res.status(400).json({ error: 'El identificador del desarrollador no es válido.' });
+  }
+  try {
+    const developer = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, email: true, role: true }
+    });
+    if (!developer) return res.status(404).json({ error: 'No se encontró el desarrollador.' });
+    if (developer.email.toLowerCase() === superDeveloperEmail || developer.role === 'SUPER_DEVELOPER') {
+      return res.status(403).json({ error: 'La cuenta SUPER_DEVELOPER no puede eliminarse ni degradarse.' });
+    }
+    if (developer.role !== 'DEVELOPER') {
+      return res.status(409).json({ error: 'La cuenta ya no tiene el rol DEVELOPER.' });
+    }
+
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: developer.id }, data: { role: 'MIEMBRO' } }),
+      prisma.session.updateMany({
+        where: { userId: developer.id, revokedAt: null },
+        data: { revokedAt: new Date() }
+      })
+    ]);
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/admin/developer-panel.html', authenticate, requireDeveloper, sendProtectedInterface);
+app.use('/admin/developer', authenticate, requireDeveloper, sendProtectedInterface);
+app.get('/admin/church-dashboard.html', authenticate, requireChurchLeadership, sendProtectedInterface);
+app.use('/admin/church', authenticate, requireChurchLeadership, sendProtectedInterface);
+app.get('/dashboard.html', authenticate, requireMember, sendProtectedInterface);
 
 app.get('/api/member/prayer-requests', authenticate, requireMember, async (req, res, next) => {
   try {
@@ -979,7 +1178,7 @@ app.post('/api/public/testimonials', requireSameOrigin, authRateLimit, async (re
 });
 
 app.get('/api/leadership/reports', authenticate, async (req, res, next) => {
-  if (!['leader', 'pastor', 'admin'].includes(req.actor.role)) {
+  if (!['leader', 'pastor', 'admin', 'superDeveloper'].includes(req.actor.role)) {
     return res.status(403).json({ error: 'Esta información está reservada a líderes y pastores autorizados.' });
   }
   try {
@@ -1165,13 +1364,18 @@ if (require.main === module) {
 
 module.exports = {
   app,
+  canAccessAudience,
   getAccess,
+  getOAuthAccess,
   getPasswordAccess,
   hashPassword,
   isConfiguredOAuthCredential,
   normalizeEmail,
   parseLeaderAccess,
+  requireChurchLeadership,
+  requireDeveloper,
   requireMember,
+  requireSuperDeveloper,
   validateLogin,
   validateMetrics,
   validatePrayerRequest,

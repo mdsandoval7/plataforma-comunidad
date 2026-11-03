@@ -32,7 +32,7 @@ Este proyecto nace con el objetivo de aplicar tecnologías accesibles e innovado
 
 ## Backend y acceso al portal
 
-El portal usa Node.js, Express, Prisma y PostgreSQL. La comunidad puede registrarse con nombre, correo y contraseña, o iniciar sesión mediante OAuth de Google o Microsoft. Las contraseñas se almacenan con scrypt; el servidor crea sesiones con cookies HTTP-only. Los correos de líderes, pastores y administradores se autorizan por separado; el registro público siempre crea una cuenta `MIEMBRO` y nunca concede permisos internos.
+El portal usa Node.js, Express, Prisma y PostgreSQL. La comunidad puede registrarse con nombre, correo y contraseña, o iniciar sesión mediante OAuth de Google o Microsoft. Las contraseñas se almacenan con scrypt; el servidor crea sesiones con cookies HTTP-only. El registro público siempre crea una cuenta `MIEMBRO` y nunca concede permisos internos.
 
 1. Copia `backend/.env.example` a `backend/.env` y completa la conexión PostgreSQL, una clave `SESSION_SECRET` aleatoria de al menos 32 caracteres y `BASE_URL`.
 2. Registra en Google Cloud y/o Microsoft Entra las URL de retorno:
@@ -40,13 +40,15 @@ El portal usa Node.js, Express, Prisma y PostgreSQL. La comunidad puede registra
    - `{BASE_URL}/api/auth/microsoft/callback`
 3. Configura los correos autorizados del servidor:
    - El registro de comunidad está abierto en la web o mediante Google o Microsoft; las cuentas públicas no reciben permisos internos.
-   - `ADMIN_EMAILS`: administradores técnicos con acceso total.
-   - `PASTOR_EMAILS`: pastores con acceso consolidado y moderación.
+   - `ADMIN_EMAILS`: compatibilidad con administradores técnicos existentes.
+   - `PASTOR_EMAILS`: compatibilidad con pastores existentes.
    - `LEADER_ACCESS`: asignación por correo, ministerio e iglesia. Ejemplo: `lider@example.org=damas@ciudad-camelot`.
    - `CHURCHES`: códigos y nombres de iglesias separados por punto y coma. Ejemplo: `ciudad-camelot:CCICAEPCC Ciudad Camelot;iglesia-hija:Nombre de la iglesia hija`.
 4. Desde `backend`, ejecuta `npm run prisma:migrate`, `npm run prisma:generate` y `npm start`.
 
-Las rutas de contraseña son `POST /api/auth/register` y `POST /api/auth/login`. El registro requiere una contraseña de 12 a 128 bytes y asigna el rol `MIEMBRO`; al iniciar sesión, la interfaz dirige a los miembros a su perfil y a los roles autorizados al panel correspondiente. Los miembros pueden enviar y consultar sus peticiones privadas en `POST` y `GET /api/member/prayer-requests`, y acceder a los devocionales mediante `GET /api/member/devotionals`. La API filtra las peticiones por la cuenta autenticada y no expone las peticiones ni los devocionales a visitantes o líderes. Para habilitar acceso por contraseña de un líder, un administrador debe verificar su identidad, asignar el rol `LIDER` en la base de datos y autorizar su alcance en `LEADER_ACCESS`. Para pastores, un administrador debe asignar `PASTOR`; los privilegios de administrador técnico siguen dependiendo de `ADMIN_EMAILS`. Nunca permitas que el formulario público elija un rol.
+Las rutas de contraseña son `POST /api/auth/register` y `POST /api/auth/login`. El registro requiere una contraseña de 12 a 128 bytes y asigna el rol `MIEMBRO`; el rol `SUPER_DEVELOPER` solo se concede al correo `sandoval97825@gmail.com` tras verificarlo con Google OAuth. El acceso por contraseña para esa cuenta se rechaza. Los roles `DEVELOPER`, `PASTOR` y `LIDER` se conservan en Prisma. Los miembros pueden enviar y consultar sus peticiones privadas en `POST` y `GET /api/member/prayer-requests`, y acceder a los devocionales mediante `GET /api/member/devotionals`; la API filtra las peticiones por la cuenta autenticada.
+
+Google OAuth redirige a `SUPER_DEVELOPER` y `DEVELOPER` a `/admin/developer-panel.html`, a pastores y líderes a `/admin/church-dashboard.html` y a miembros a `/dashboard.html`. Express protege esos paneles y sus APIs en el servidor. Solo `SUPER_DEVELOPER` puede agregar o revocar desarrolladores delegados mediante `POST` y `DELETE /api/developer/developers`; revocar un rol también invalida sus sesiones activas. Un administrador debe verificar identidades antes de asignar `LIDER`, `PASTOR` o `DEVELOPER` en Prisma. Nunca permitas que el formulario público elija un rol.
 
 El inicio de sesión con Google usa Passport (`passport-google-oauth20`) y cookies HTTP-only para la sesión Prisma. Las rutas `/api/auth/google` y `/api/auth/google/callback` validan el estado OAuth, crean una cuenta nueva con rol `MIEMBRO` o inician sesión con una cuenta existente. Una cuenta existente inactiva no se reactiva al autenticar con Google. En `backend/.env`, reemplaza el marcador de `GOOGLE_CLIENT_SECRET` por el secreto real de Google; el marcador no habilita el proveedor. En local, el botón de Google redirige al backend en `http://localhost:3000`; en otros entornos usa el mismo origen.
 

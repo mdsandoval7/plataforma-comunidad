@@ -2,13 +2,18 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   app,
+  canAccessAudience,
   getAccess,
+  getOAuthAccess,
   getPasswordAccess,
   hashPassword,
   isConfiguredOAuthCredential,
   normalizeEmail,
   parseLeaderAccess,
+  requireChurchLeadership,
+  requireDeveloper,
   requireMember,
+  requireSuperDeveloper,
   validateLogin,
   validateMetrics,
   validatePrayerRequest,
@@ -153,6 +158,91 @@ test('member-only routes reject leaders and allow community accounts', () => {
 
   requireMember({ actor: { role: 'community' } }, response, () => { continued = true; });
   assert.equal(continued, true);
+});
+
+test('developer OAuth access respects stored roles and verified owner assignment', () => {
+  assert.equal(getOAuthAccess({
+    email: 'sandoval97825@gmail.com',
+    role: 'SUPER_DEVELOPER'
+  }).role, 'superDeveloper');
+  assert.notEqual(getOAuthAccess({
+    email: 'sandoval97825@gmail.com',
+    role: 'MIEMBRO'
+  }).role, 'superDeveloper');
+  assert.equal(getOAuthAccess({
+    email: 'delegate@example.org',
+    role: 'DEVELOPER'
+  }).role, 'developer');
+  assert.equal(getOAuthAccess({
+    email: 'pastor@example.org',
+    role: 'PASTOR'
+  }).role, 'pastor');
+  assert.equal(getOAuthAccess({
+    email: 'attacker@example.org',
+    role: 'SUPER_DEVELOPER'
+  }), null);
+  assert.equal(getPasswordAccess({
+    email: 'sandoval97825@gmail.com',
+    role: 'SUPER_DEVELOPER'
+  }), null);
+  assert.equal(canAccessAudience({ role: 'superDeveloper' }, 'leadership'), true);
+  assert.equal(canAccessAudience({ role: 'developer' }, 'leadership'), false);
+  assert.equal(canAccessAudience({ role: 'community' }, 'admin'), false);
+  assert.equal(canAccessAudience(null, 'community'), false);
+});
+
+test('protected role middleware rejects users outside the allowed role', () => {
+  const response = {
+    statusCode: 200,
+    body: null,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(body) {
+      this.body = body;
+      return this;
+    }
+  };
+  let continued = false;
+
+  requireDeveloper({ actor: { role: 'leader' } }, response, () => { continued = true; });
+  assert.equal(response.statusCode, 403);
+  assert.equal(continued, false);
+
+  response.statusCode = 200;
+  requireChurchLeadership({ actor: { role: 'developer' } }, response, () => { continued = true; });
+  assert.equal(response.statusCode, 403);
+  assert.equal(continued, false);
+
+  response.statusCode = 200;
+  requireSuperDeveloper({
+    actor: { role: 'superDeveloper', email: 'delegate@example.org' }
+  }, response, () => { continued = true; });
+  assert.equal(response.statusCode, 403);
+  assert.equal(continued, false);
+});
+
+test('admin panel routes require an active session before serving the interface', async t => {
+  const server = app.listen(0, '127.0.0.1');
+  t.after(() => new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+  }));
+  await new Promise((resolve, reject) => {
+    server.once('listening', resolve);
+    server.once('error', reject);
+  });
+
+  for (const route of [
+    '/admin/developer-panel.html',
+    '/admin/developer/settings',
+    '/admin/church-dashboard.html',
+    '/admin/church/events',
+    '/dashboard.html'
+  ]) {
+    const response = await fetch(`http://127.0.0.1:${server.address().port}${route}`);
+    assert.equal(response.status, 401, `${route} should require authentication`);
+  }
 });
 
 test('public member registrations cannot inherit leader access from email allowlists', () => {

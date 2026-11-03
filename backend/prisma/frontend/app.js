@@ -289,6 +289,14 @@ async function submitEmailLogin(event, audience) {
       await showMemberDashboard(actor);
       return;
     }
+    if (['developer', 'superDeveloper'].includes(actor.role)) {
+      window.location.assign('/admin/developer-panel.html');
+      return;
+    }
+    if (['pastor', 'leader'].includes(actor.role)) {
+      window.location.assign('/admin/church-dashboard.html');
+      return;
+    }
     await setupDashboard(actor);
     closeModal(audience === 'community' ? 'modal-acc-public' : 'modal-acc-leaders');
     showMessage('dashboardMessage', `Acceso correcto. Bienvenido/a, ${actor.name}.`);
@@ -684,6 +692,7 @@ function setupMinistrySelector() {
 async function setupDashboard(actor) {
   authenticatedActor = actor;
   document.getElementById('memberDashboard').hidden = true;
+  document.getElementById('developerDashboard').hidden = true;
   const dashboard = document.getElementById('adminDashboard');
   dashboard.hidden = false;
   document.getElementById('welcomeUserText').textContent =
@@ -701,6 +710,7 @@ async function setupDashboard(actor) {
 async function showMemberDashboard(actor) {
   authenticatedActor = actor;
   document.getElementById('adminDashboard').hidden = true;
+  document.getElementById('developerDashboard').hidden = true;
   document.getElementById('communityLogoutButton').hidden = true;
   document.getElementById('memberWelcomeName').textContent = actor.name || actor.email;
   document.getElementById('memberEmail').textContent = actor.email;
@@ -708,6 +718,81 @@ async function showMemberDashboard(actor) {
   dashboard.hidden = false;
   await Promise.all([loadPrayerRequests(), loadMemberDevotionals(), loadMemberEvents()]);
   dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderDeveloperList(developers, canManage) {
+  const list = document.getElementById('developerList');
+  if (!developers.length) {
+    const empty = document.createElement('li');
+    empty.textContent = 'Aún no hay desarrolladores delegados.';
+    list.replaceChildren(empty);
+    return;
+  }
+
+  const items = developers.map(developer => {
+    const item = document.createElement('li');
+    const details = document.createElement('span');
+    details.textContent = `${developer.name} · ${developer.email}`;
+    item.append(details);
+    if (canManage) {
+      const revokeButton = document.createElement('button');
+      revokeButton.type = 'button';
+      revokeButton.className = 'developer-revoke-button';
+      revokeButton.dataset.revokeDeveloper = developer.id;
+      revokeButton.textContent = 'Revocar acceso';
+      item.append(revokeButton);
+    }
+    return item;
+  });
+  list.replaceChildren(...items);
+}
+
+async function loadDevelopers() {
+  try {
+    const { developers, canManage } = await apiRequest('/api/developer/developers');
+    document.getElementById('developerForm').hidden = !canManage;
+    renderDeveloperList(developers, canManage);
+  } catch (error) {
+    showMessage('developerMessage', error.message, true);
+  }
+}
+
+async function setupDeveloperDashboard(actor) {
+  authenticatedActor = actor;
+  document.getElementById('adminDashboard').hidden = true;
+  document.getElementById('memberDashboard').hidden = true;
+  document.getElementById('developerWelcomeText').textContent =
+    `${actor.name || actor.email} · ${actor.role === 'superDeveloper' ? 'SUPER_DEVELOPER' : 'DEVELOPER'}`;
+  document.getElementById('developerDashboard').hidden = false;
+  await loadDevelopers();
+}
+
+async function addDeveloper(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form).entries());
+  try {
+    await apiRequest('/api/developer/developers', {
+      method: 'POST',
+      body: JSON.stringify(values)
+    });
+    form.reset();
+    showMessage('developerMessage', 'El desarrollador fue agregado correctamente.');
+    await loadDevelopers();
+  } catch (error) {
+    showMessage('developerMessage', error.message, true);
+  }
+}
+
+async function revokeDeveloper(id) {
+  if (!window.confirm('¿Revocar el acceso de este desarrollador? Sus sesiones activas se cerrarán.')) return;
+  try {
+    await apiRequest(`/api/developer/developers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    showMessage('developerMessage', 'El acceso del desarrollador fue revocado.');
+    await loadDevelopers();
+  } catch (error) {
+    showMessage('developerMessage', error.message, true);
+  }
 }
 
 async function saveMetrics(event) {
@@ -788,11 +873,21 @@ async function logout() {
     authenticatedActor = null;
     document.getElementById('adminDashboard').hidden = true;
     document.getElementById('memberDashboard').hidden = true;
+    document.getElementById('developerDashboard').hidden = true;
     document.getElementById('communityLogoutButton').hidden = true;
     closeModal('modal-acc-public');
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+      window.location.assign('/');
+      return;
+    }
     window.location.hash = '#mision-vision';
   } catch (error) {
-    showMessage(authenticatedActor?.role === 'community' ? 'generalAuthMessage' : 'dashboardMessage', error.message, true);
+    const messageId = ['developer', 'superDeveloper'].includes(authenticatedActor?.role)
+      ? 'developerMessage'
+      : authenticatedActor?.role === 'community'
+        ? 'generalAuthMessage'
+        : 'dashboardMessage';
+    showMessage(messageId, error.message, true);
   }
 }
 
@@ -885,6 +980,12 @@ function attachEventHandlers() {
       : '¡Tu asistencia quedó confirmada!');
   });
   document.getElementById('communityLogoutButton').addEventListener('click', logout);
+  document.getElementById('developerLogoutButton').addEventListener('click', logout);
+  document.getElementById('developerForm').addEventListener('submit', addDeveloper);
+  document.getElementById('developerList').addEventListener('click', event => {
+    const button = event.target.closest('[data-revoke-developer]');
+    if (button) revokeDeveloper(button.dataset.revokeDeveloper);
+  });
   const menuToggle = document.querySelector('.nav-toggle');
   const primaryMenu = document.getElementById('primaryMenu');
   menuToggle.addEventListener('click', () => {
@@ -935,6 +1036,13 @@ function attachEventHandlers() {
 
 async function initialize() {
   attachEventHandlers();
+  const currentPath = window.location.pathname;
+  const isDeveloperRoute = currentPath === '/admin/developer-panel.html' || currentPath.startsWith('/admin/developer/');
+  const isChurchRoute = currentPath === '/admin/church-dashboard.html' || currentPath.startsWith('/admin/church/');
+  const isMemberRoute = currentPath === '/dashboard.html';
+  if (isDeveloperRoute) document.body.classList.add('developer-dashboard-route');
+  if (isChurchRoute) document.body.classList.add('church-dashboard-route');
+  if (isMemberRoute) document.body.classList.add('member-dashboard-route');
   if (typeof feather !== 'undefined') feather.replace();
   await loadPublicContent();
   try {
@@ -944,17 +1052,27 @@ async function initialize() {
   }
   try {
     const actor = await apiRequest('/api/auth/me');
-    if (actor.role === 'community') {
+    if (isDeveloperRoute) {
+      await setupDeveloperDashboard(actor);
+    } else if (isChurchRoute) {
+      await setupDashboard(actor);
+    } else if (isMemberRoute || actor.role === 'community') {
       await showMemberDashboard(actor);
       if (new URLSearchParams(window.location.search).get('community') === 'welcome') {
         showMessage('prayerRequestMessage', `¡Bienvenido/a, ${actor.name || actor.email}! Ya puedes enviar tus peticiones privadas.`);
         window.history.replaceState({}, '', `${window.location.pathname}${window.location.hash}`);
       }
+    } else if (['developer', 'superDeveloper'].includes(actor.role)) {
+      window.location.replace('/admin/developer-panel.html');
+    } else if (['pastor', 'leader'].includes(actor.role)) {
+      window.location.replace('/admin/church-dashboard.html');
     } else {
       await setupDashboard(actor);
     }
   } catch (error) {
-    if (error.status !== 401) {
+    if ([401, 403].includes(error.status) && (isDeveloperRoute || isChurchRoute || isMemberRoute)) {
+      window.location.replace('/');
+    } else if (error.status !== 401) {
       showMessage('leaderAuthMessage', error.message, true);
       showMessage('adminAuthMessage', error.message, true);
     }

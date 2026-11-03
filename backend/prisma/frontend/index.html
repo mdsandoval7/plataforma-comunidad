@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/">
   <link rel="icon" type="image/png" href="./favicon.png">
   <title>CCICAEPCC - Centro Cristiano ICAEP Ciudad Camelot</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -745,6 +746,29 @@
         </div>
       </section>
     </div>
+  </section>
+
+  <section id="developerDashboard" class="developer-dashboard" aria-labelledby="developerDashboardTitle" hidden>
+    <header class="developer-dashboard-header">
+      <div>
+        <p class="member-eyebrow">Administración técnica</p>
+        <h1 id="developerDashboardTitle">Panel de desarrolladores</h1>
+        <p id="developerWelcomeText"></p>
+      </div>
+      <button id="developerLogoutButton" class="member-logout-button" type="button">Cerrar sesión</button>
+    </header>
+    <p id="developerMessage" class="member-feedback" role="status" aria-live="polite"></p>
+
+    <section class="developer-panel" aria-labelledby="developerListTitle">
+      <h2 id="developerListTitle">Desarrolladores delegados</h2>
+      <p>Los desarrolladores delegados no pueden administrar ni eliminar la cuenta SUPER_DEVELOPER.</p>
+      <form id="developerForm" class="developer-form" hidden>
+        <label>Nombre (opcional)<input name="name" type="text" maxlength="100" autocomplete="name"></label>
+        <label>Correo electrónico<input name="email" type="email" maxlength="254" autocomplete="email" required></label>
+        <button class="btn-primary-peace" type="submit">Agregar desarrollador</button>
+      </form>
+      <ul id="developerList" class="developer-list" aria-live="polite"></ul>
+    </section>
   </section>
 
   <!-- MODAL: REGISTRO E INICIO DE SESIÓN DE LA COMUNIDAD -->
