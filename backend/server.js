@@ -48,13 +48,30 @@ const metricFields = [
   'pastoralGoal'
 ];
 const oauthRateLimits = new Map();
-const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-const configuredBaseUrl = new URL(baseUrl);
-if (!['http:', 'https:'].includes(configuredBaseUrl.protocol)) {
-  throw new Error('BASE_URL debe usar HTTP o HTTPS.');
+function resolveBaseUrl(env = process.env) {
+  const configuredUrl = env.BASE_URL
+    || (env.VERCEL_PROJECT_PRODUCTION_URL && `https://${env.VERCEL_PROJECT_PRODUCTION_URL}`)
+    || (env.VERCEL_URL && `https://${env.VERCEL_URL}`)
+    || 'http://localhost:3000';
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(configuredUrl);
+  } catch {
+    throw new Error('BASE_URL debe ser una URL HTTP o HTTPS válida.');
+  }
+  if (!['http:', 'https:'].includes(parsedUrl.protocol) || parsedUrl.username || parsedUrl.password) {
+    throw new Error('BASE_URL debe usar HTTP o HTTPS y no incluir credenciales.');
+  }
+  return parsedUrl.origin;
 }
+const baseUrl = resolveBaseUrl();
+const configuredBaseUrl = new URL(baseUrl);
+const secureCookies = process.env.NODE_ENV === 'production'
+  || Boolean(process.env.VERCEL)
+  || configuredBaseUrl.protocol === 'https:';
 
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(passport.initialize());
 app.use((req, res, next) => {
   res.set({
@@ -336,10 +353,10 @@ function readCookie(req, name) {
   return null;
 }
 
-function sessionCookieOptions(maxAge) {
+function sessionCookieOptions(maxAge, secure = secureCookies) {
   return {
     httpOnly: true,
-    secure: configuredBaseUrl.protocol === 'https:',
+    secure,
     sameSite: 'lax',
     path: '/',
     maxAge
@@ -347,13 +364,16 @@ function sessionCookieOptions(maxAge) {
 }
 
 function signState(payload) {
+  if (!isConfiguredSessionSecret(process.env.SESSION_SECRET)) {
+    throw new Error('SESSION_SECRET debe tener al menos 32 caracteres y no ser un valor de ejemplo.');
+  }
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto.createHmac('sha256', process.env.SESSION_SECRET).update(encoded).digest('base64url');
   return `${encoded}.${signature}`;
 }
 
 function verifyState(value) {
-  if (!value || !process.env.SESSION_SECRET) return null;
+  if (!value || !isConfiguredSessionSecret(process.env.SESSION_SECRET)) return null;
   const [encoded, signature] = value.split('.');
   if (!encoded || !signature) return null;
   const expected = crypto.createHmac('sha256', process.env.SESSION_SECRET).update(encoded).digest();
@@ -372,11 +392,11 @@ function verifyState(value) {
   }
 }
 
-function providerConfig(provider) {
-  const callbackUrl = new URL(`/api/auth/${provider}/callback`, baseUrl).toString();
+function providerConfig(provider, env = process.env, applicationBaseUrl = baseUrl) {
+  const callbackUrl = new URL(`/api/auth/${provider}/callback`, applicationBaseUrl).toString();
   if (provider === 'google') {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const clientId = env.GOOGLE_CLIENT_ID;
+    const clientSecret = env.GOOGLE_CLIENT_SECRET;
     return isConfiguredOAuthCredential(clientId) && isConfiguredOAuthCredential(clientSecret) ? {
       clientId,
       clientSecret,
@@ -387,9 +407,9 @@ function providerConfig(provider) {
     } : null;
   }
   if (provider === 'microsoft') {
-    const clientId = process.env.MICROSOFT_CLIENT_ID;
-    const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-    const tenantId = process.env.MICROSOFT_TENANT_ID || 'common';
+    const clientId = env.MICROSOFT_CLIENT_ID;
+    const clientSecret = env.MICROSOFT_CLIENT_SECRET;
+    const tenantId = env.MICROSOFT_TENANT_ID || 'common';
     const authority = `https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0`;
     return clientId && clientSecret ? {
       clientId,
@@ -407,6 +427,12 @@ function isConfiguredOAuthCredential(value) {
   return typeof value === 'string'
     && value.length > 0
     && !/^(?:PEGA_AQUI|YOUR_|CHANGE_ME|PLACEHOLDER)/i.test(value);
+}
+
+function isConfiguredSessionSecret(value) {
+  return typeof value === 'string'
+    && value.length >= 32
+    && !/(?:replace-with|change-me|placeholder|your-secret)/i.test(value);
 }
 
 function configureGooglePassport() {
@@ -840,8 +866,8 @@ app.get('/api/auth/google', authRateLimit, (req, res, next) => {
   if (!googlePassportConfigured) {
     return res.status(503).send('Este proveedor de acceso aún no está configurado.');
   }
-  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
-    return res.status(503).send('Falta configurar SESSION_SECRET con al menos 32 caracteres.');
+  if (!isConfiguredSessionSecret(process.env.SESSION_SECRET)) {
+    return res.status(503).send('Configura SESSION_SECRET con al menos 32 caracteres aleatorios.');
   }
   const audience = ['admin', 'community', 'leadership'].includes(req.query.audience)
     ? req.query.audience
@@ -908,8 +934,8 @@ app.get('/api/auth/:provider', authRateLimit, (req, res) => {
   const provider = req.params.provider;
   const config = providerConfig(provider);
   if (!config) return res.status(503).send('Este proveedor de acceso aún no está configurado.');
-  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
-    return res.status(503).send('Falta configurar SESSION_SECRET con al menos 32 caracteres.');
+  if (!isConfiguredSessionSecret(process.env.SESSION_SECRET)) {
+    return res.status(503).send('Configura SESSION_SECRET con al menos 32 caracteres aleatorios.');
   }
   const audience = ['admin', 'community', 'leadership'].includes(req.query.audience)
     ? req.query.audience
@@ -1446,5 +1472,9 @@ module.exports = Object.assign(app, {
   validateRegistration,
   validateReport,
   validateTestimonialRating,
-  verifyPassword
+  verifyPassword,
+  providerConfig,
+  resolveBaseUrl,
+  isConfiguredSessionSecret,
+  sessionCookieOptions
 });

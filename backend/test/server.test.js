@@ -9,12 +9,16 @@ const {
   getPasswordAccess,
   hashPassword,
   isConfiguredOAuthCredential,
+  isConfiguredSessionSecret,
   normalizeEmail,
   parseLeaderAccess,
+  providerConfig,
   requireChurchLeadership,
   requireDeveloper,
   requireMember,
   requireSuperDeveloper,
+  resolveBaseUrl,
+  sessionCookieOptions,
   validateLogin,
   validateMetrics,
   validatePrayerRequest,
@@ -120,6 +124,43 @@ test('OAuth credentials reject template placeholders', () => {
   assert.equal(isConfiguredOAuthCredential(''), false);
   assert.equal(isConfiguredOAuthCredential('PEGA_AQUI_TU_SECRETO_DE_CLIENTE'), false);
   assert.equal(isConfiguredOAuthCredential('YOUR_CLIENT_SECRET'), false);
+});
+
+test('OAuth callback uses Vercel production URL and configured Google credentials', () => {
+  const productionUrl = resolveBaseUrl({
+    VERCEL_PROJECT_PRODUCTION_URL: 'icaepcamelot.vercel.app',
+    VERCEL_URL: 'icaepcamelot-preview.vercel.app'
+  });
+  assert.equal(productionUrl, 'https://icaepcamelot.vercel.app');
+
+  const google = providerConfig('google', {
+    GOOGLE_CLIENT_ID: 'test-google-client-id',
+    GOOGLE_CLIENT_SECRET: 'test-google-client-secret'
+  }, productionUrl);
+  assert.equal(google.clientId, 'test-google-client-id');
+  assert.equal(google.clientSecret, 'test-google-client-secret');
+  assert.equal(google.callbackUrl, 'https://icaepcamelot.vercel.app/api/auth/google/callback');
+
+  assert.equal(resolveBaseUrl({ VERCEL_URL: 'icaepcamelot-preview.vercel.app' }), 'https://icaepcamelot-preview.vercel.app');
+  assert.equal(resolveBaseUrl({}), 'http://localhost:3000');
+  assert.throws(() => resolveBaseUrl({ BASE_URL: 'ftp://icaepcamelot.vercel.app' }));
+});
+
+test('session secret rejects short and example values', () => {
+  assert.equal(isConfiguredSessionSecret('a-secure-random-secret-with-32-chars'), true);
+  assert.equal(isConfiguredSessionSecret('short'), false);
+  assert.equal(isConfiguredSessionSecret('replace-with-a-random-secret-at-least-32-characters-long'), false);
+});
+
+test('Express trusts the Vercel proxy and session cookies support secure production mode', () => {
+  assert.equal(app.get('trust proxy'), 1);
+  assert.deepEqual(sessionCookieOptions(1000, true), {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 1000
+  });
 });
 
 test('passwords are stored as scrypt hashes and checked safely', async () => {
