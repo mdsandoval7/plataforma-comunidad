@@ -7,7 +7,8 @@ const ministryLabels = {
   banda: 'Banda Musical y Canto',
   evangelismo: 'Evangelismo y Diáconos',
   vendimias: 'Vendimias',
-  pastores: 'Pastores'
+  pastores: 'Pastores',
+  dynamos: 'Dynamos'
 };
 
 const metricLabels = {

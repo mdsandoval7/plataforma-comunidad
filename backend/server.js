@@ -30,7 +30,8 @@ const ministries = new Set([
   'banda',
   'evangelismo',
   'vendimias',
-  'pastores'
+  'pastores',
+  'dynamos'
 ]);
 const defaultChurchCode = 'ciudad-camelot';
 const metricFields = [
@@ -48,6 +49,13 @@ const metricFields = [
   'pastoralGoal'
 ];
 const oauthRateLimits = new Map();
+const defaultLeaderAssignments = [
+  {
+    email: 'presidente.dynamos@gmail.com',
+    ministryCode: 'dynamos',
+    churchCode: defaultChurchCode
+  }
+];
 function resolveBaseUrl(env = process.env) {
   const configuredUrl = env.BASE_URL
     || (env.VERCEL_PROJECT_PRODUCTION_URL && `https://${env.VERCEL_PROJECT_PRODUCTION_URL}`)
@@ -188,6 +196,20 @@ function parseLeaderAccess(value = '') {
   return entries;
 }
 
+function getLeaderAccess() {
+  const entries = new Map(defaultLeaderAssignments.map(assignment => [
+    assignment.email,
+    {
+      ministryCode: assignment.ministryCode,
+      churchCode: assignment.churchCode
+    }
+  ]));
+  for (const [email, assignment] of parseLeaderAccess(process.env.LEADER_ACCESS)) {
+    entries.set(email, assignment);
+  }
+  return entries;
+}
+
 function getChurchName(code) {
   return getChurches().find(church => church.code === code)?.name || code;
 }
@@ -196,7 +218,7 @@ function getAccess(email) {
   const normalizedEmail = email.toLowerCase();
   const administrators = parseEmailList(process.env.ADMIN_EMAILS);
   const pastors = parseEmailList(process.env.PASTOR_EMAILS);
-  const leaderAccess = parseLeaderAccess(process.env.LEADER_ACCESS);
+  const leaderAccess = getLeaderAccess();
   const churchCodes = getChurches().map(church => church.code);
 
   if (administrators.has(normalizedEmail)) {
@@ -260,6 +282,18 @@ function getOAuthAccess(user) {
       : { role: 'leader', ministries: [], churchCodes: [] };
   }
   return getAccess(email);
+}
+
+function getAuthorizedGoogleRole(email, existingUser) {
+  const normalizedEmail = email.toLowerCase();
+  if (normalizedEmail === superDeveloperEmail) return 'SUPER_DEVELOPER';
+  if (['PASTOR', 'LIDER'].includes(existingUser?.role)) return existingUser.role;
+  if (existingUser && existingUser.role !== 'MIEMBRO') return null;
+
+  const configuredAccess = getAccess(normalizedEmail);
+  if (configuredAccess.role === 'pastor') return 'PASTOR';
+  if (configuredAccess.role === 'leader') return 'LIDER';
+  return null;
 }
 
 function canAccessAudience(access, audience) {
@@ -435,6 +469,34 @@ function isConfiguredSessionSecret(value) {
     && !/(?:replace-with|change-me|placeholder|your-secret)/i.test(value);
 }
 
+function getVerifiedGoogleIdentity(profile) {
+  if (!profile || typeof profile !== 'object') return null;
+  const verifiedEmailEntry = Array.isArray(profile.emails)
+    ? profile.emails.find(item => typeof item?.value === 'string' && item.verified === true)
+    : null;
+  const verifiedJsonEmail = profile._json?.email_verified === true
+    && typeof profile._json.email === 'string'
+    ? profile._json.email
+    : null;
+  const rawEmail = verifiedEmailEntry?.value || verifiedJsonEmail;
+  if (!rawEmail) {
+    return null;
+  }
+
+  let email;
+  try {
+    email = normalizeEmail(rawEmail);
+  } catch {
+    return null;
+  }
+  const displayName = typeof profile.displayName === 'string' ? profile.displayName.trim() : '';
+  const verifiedName = typeof profile._json?.name === 'string' ? profile._json.name.trim() : '';
+  return {
+    email,
+    name: displayName || verifiedName || email.split('@')[0]
+  };
+}
+
 function configureGooglePassport() {
   const config = providerConfig('google');
   if (!config) return false;
@@ -446,10 +508,11 @@ function configureGooglePassport() {
     passReqToCallback: true
   }, async (req, accessToken, refreshToken, profile, done) => {
     try {
-      const email = normalizeEmail(profile.emails?.find(item => item.value)?.value);
-      if (profile._json?.email_verified !== true) {
-        return done(null, false, { message: 'Google no confirmó que el correo esté verificado.' });
+      const identity = getVerifiedGoogleIdentity(profile);
+      if (!identity) {
+        return done(null, false, { message: 'Google no confirmó un correo electrónico válido.' });
       }
+      const { email, name } = identity;
       const state = verifyState(readCookie(req, oauthCookieName));
       if (!state || state.provider !== 'google') {
         return done(null, false, { message: 'La solicitud de acceso expiró o no es válida.' });
@@ -461,13 +524,11 @@ function configureGooglePassport() {
       if (existingUser && (!existingUser.isActive || existingUser.status !== 'ACTIVE')) {
         return done(null, false, { message: 'La cuenta está inactiva. Contacta al administrador.' });
       }
-      const account = email === superDeveloperEmail ? {
-        email,
-        role: 'SUPER_DEVELOPER'
-      } : existingUser || {
-        email,
-        role: 'MIEMBRO'
-      };
+      const authorizedRole = getAuthorizedGoogleRole(email, existingUser);
+      if (!authorizedRole) {
+        return done(null, false, { message: 'Tu correo no está autorizado. El acceso con Google es solo para pastores, líderes y el SUPER_DEVELOPER.' });
+      }
+      const account = { email, role: authorizedRole };
       const access = getOAuthAccess(account);
       if (!canAccessAudience(access, state.audience)) {
         return done(null, false, { message: 'El correo autenticado no está autorizado para este acceso.' });
@@ -476,15 +537,15 @@ function configureGooglePassport() {
       const user = await prisma.user.upsert({
         where: { email },
         create: {
-          name: profile.displayName || email.split('@')[0],
+          name,
           email,
           passwordHash: 'OAUTH_ONLY',
-          role: email === superDeveloperEmail ? 'SUPER_DEVELOPER' : 'MIEMBRO',
+          role: authorizedRole,
           lastLoginAt: new Date()
         },
         update: {
-          ...(profile.displayName ? { name: profile.displayName } : {}),
-          ...(email === superDeveloperEmail ? { role: 'SUPER_DEVELOPER' } : {}),
+          name,
+          role: authorizedRole,
           lastLoginAt: new Date()
         },
         select: { id: true, name: true, email: true, role: true, status: true, isActive: true }
@@ -907,6 +968,10 @@ app.get('/api/auth/google/callback', authRateLimit, (req, res, next) => {
     if (!user.isActive || user.status !== 'ACTIVE') {
       return res.status(403).send('La cuenta está inactiva. Contacta al administrador.');
     }
+    const access = getOAuthAccess(user);
+    if (!['superDeveloper', 'pastor', 'leader'].includes(access?.role)) {
+      return res.status(403).send('Tu correo no está autorizado. El acceso con Google es solo para pastores, líderes y el SUPER_DEVELOPER.');
+    }
 
     try {
       const token = crypto.randomBytes(32).toString('base64url');
@@ -921,7 +986,6 @@ app.get('/api/auth/google/callback', authRateLimit, (req, res, next) => {
         }
       });
       res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
-      const access = getOAuthAccess(user);
       const destination = getOAuthRedirectPath(user, access);
       res.redirect(user.welcomeEmailSent === false ? getWelcomeEmailFailureRedirect(destination) : destination);
     } catch (sessionError) {
@@ -1455,6 +1519,8 @@ module.exports = Object.assign(app, {
   app,
   canAccessAudience,
   getAccess,
+  getLeaderAccess,
+  getAuthorizedGoogleRole,
   getOAuthRedirectPath,
   getOAuthAccess,
   getPasswordAccess,
@@ -1476,5 +1542,6 @@ module.exports = Object.assign(app, {
   providerConfig,
   resolveBaseUrl,
   isConfiguredSessionSecret,
-  sessionCookieOptions
+  sessionCookieOptions,
+  getVerifiedGoogleIdentity
 });

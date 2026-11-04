@@ -4,9 +4,12 @@ const {
   app,
   canAccessAudience,
   getAccess,
+  getAuthorizedGoogleRole,
+  getLeaderAccess,
   getOAuthRedirectPath,
   getOAuthAccess,
   getPasswordAccess,
+  getVerifiedGoogleIdentity,
   hashPassword,
   isConfiguredOAuthCredential,
   isConfiguredSessionSecret,
@@ -124,6 +127,88 @@ test('OAuth credentials reject template placeholders', () => {
   assert.equal(isConfiguredOAuthCredential(''), false);
   assert.equal(isConfiguredOAuthCredential('PEGA_AQUI_TU_SECRETO_DE_CLIENTE'), false);
   assert.equal(isConfiguredOAuthCredential('YOUR_CLIENT_SECRET'), false);
+});
+
+test('Google profile extraction requires a verified and valid email', () => {
+  assert.deepEqual(getVerifiedGoogleIdentity({
+    displayName: '  Ana Iglesia ',
+    emails: [{ value: ' ANA@example.org ', verified: true }]
+  }), {
+    email: 'ana@example.org',
+    name: 'Ana Iglesia'
+  });
+  assert.deepEqual(getVerifiedGoogleIdentity({
+    _json: { email: 'leader@example.org', email_verified: true }
+  }), {
+    email: 'leader@example.org',
+    name: 'leader'
+  });
+  assert.equal(getVerifiedGoogleIdentity({ emails: [{ value: 'member@example.org' }] }), null);
+  assert.equal(getVerifiedGoogleIdentity({
+    _json: { email: 'not-an-email', email_verified: true }
+  }), null);
+  assert.equal(getVerifiedGoogleIdentity(null), null);
+});
+
+test('Google login is limited to authorized leadership and the super developer', () => {
+  const previousPastors = process.env.PASTOR_EMAILS;
+  const previousLeaders = process.env.LEADER_ACCESS;
+  const previousChurches = process.env.CHURCHES;
+  process.env.CHURCHES = 'ciudad-camelot:CCICAEPCC Ciudad Camelot';
+  process.env.PASTOR_EMAILS = 'pastor@example.org';
+  process.env.LEADER_ACCESS = 'leader@example.org=damas@ciudad-camelot';
+  try {
+    assert.equal(getAuthorizedGoogleRole('pastor@example.org', null), 'PASTOR');
+    assert.equal(getAuthorizedGoogleRole('leader@example.org', null), 'LIDER');
+    assert.equal(getAuthorizedGoogleRole('pastor@example.org', {
+      email: 'pastor@example.org',
+      role: 'MIEMBRO'
+    }), 'PASTOR');
+    assert.equal(getAuthorizedGoogleRole('existing@example.org', {
+      email: 'existing@example.org',
+      role: 'PASTOR'
+    }), 'PASTOR');
+    assert.equal(getAuthorizedGoogleRole('existing@example.org', {
+      email: 'existing@example.org',
+      role: 'LIDER'
+    }), 'LIDER');
+    assert.equal(getAuthorizedGoogleRole('sandoval97825@gmail.com', null), 'SUPER_DEVELOPER');
+    assert.equal(getAuthorizedGoogleRole('member@example.org', {
+      email: 'member@example.org',
+      role: 'MIEMBRO'
+    }), null);
+    assert.equal(getAuthorizedGoogleRole('developer@example.org', {
+      email: 'developer@example.org',
+      role: 'DEVELOPER'
+    }), null);
+  } finally {
+    if (previousPastors === undefined) delete process.env.PASTOR_EMAILS;
+    else process.env.PASTOR_EMAILS = previousPastors;
+    if (previousLeaders === undefined) delete process.env.LEADER_ACCESS;
+    else process.env.LEADER_ACCESS = previousLeaders;
+    if (previousChurches === undefined) delete process.env.CHURCHES;
+    else process.env.CHURCHES = previousChurches;
+  }
+});
+
+test('default Google leadership allowlist includes the initial leader and supports 34 addresses', () => {
+  const previousLeaders = process.env.LEADER_ACCESS;
+  const additionalAssignments = Array.from({ length: 33 }, (_, index) =>
+    `leader${index + 1}@example.org=damas@ciudad-camelot`
+  ).join(',');
+  process.env.LEADER_ACCESS = additionalAssignments;
+  try {
+    const allowlist = getLeaderAccess();
+    assert.equal(allowlist.size, 34);
+    assert.equal(getAccess('presidente.dynamos@gmail.com').role, 'leader');
+    assert.deepEqual(getAccess('presidente.dynamos@gmail.com').ministries, ['dynamos']);
+    assert.equal(getAuthorizedGoogleRole('presidente.dynamos@gmail.com', null), 'LIDER');
+    assert.equal(getAccess('leader33@example.org').role, 'leader');
+    assert.equal(getAuthorizedGoogleRole('sandoval97825@gmail.com', null), 'SUPER_DEVELOPER');
+  } finally {
+    if (previousLeaders === undefined) delete process.env.LEADER_ACCESS;
+    else process.env.LEADER_ACCESS = previousLeaders;
+  }
 });
 
 test('OAuth callback uses Vercel production URL and configured Google credentials', () => {
