@@ -864,7 +864,7 @@ app.post('/api/auth/login', requireSameOrigin, authRateLimit, async (req, res, n
 
 app.get('/api/auth/google', authRateLimit, (req, res, next) => {
   if (!googlePassportConfigured) {
-    return res.status(503).send('Este proveedor de acceso aún no está configurado.');
+    return res.status(503).send('Google OAuth no está configurado en el servidor. Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en Vercel.');
   }
   if (!isConfiguredSessionSecret(process.env.SESSION_SECRET)) {
     return res.status(503).send('Configura SESSION_SECRET con al menos 32 caracteres aleatorios.');

@@ -28,7 +28,6 @@ const metricLabels = {
 let authenticatedActor = null;
 let currentMinistryCode = null;
 let currentChurchCode = null;
-let availableProviders = null;
 let ministryReports = [];
 const memberEventAttendance = new Set();
 
@@ -230,27 +229,11 @@ function closeModal(modalId) {
 }
 
 async function startAuth(provider, audience = 'leadership') {
-  const messageId = audience === 'admin'
-    ? 'adminAuthMessage'
-    : audience === 'community'
-      ? 'generalAuthMessage'
-      : 'leaderAuthMessage';
   if (provider === 'google') {
     window.location.assign('/api/auth/google');
     return;
   }
-  try {
-    if (!availableProviders) {
-      availableProviders = await apiRequest('/api/auth/providers');
-    }
-    if (!availableProviders[provider]) {
-      showMessage(messageId, `El acceso ${provider === 'google' ? 'con Google' : 'con Microsoft'} no está configurado todavía.`, true);
-      return;
-    }
-    window.location.assign(`/api/auth/${provider}?audience=${encodeURIComponent(audience)}`);
-  } catch (error) {
-    showMessage(messageId, error.message, true);
-  }
+  window.location.assign(`/api/auth/${provider}?audience=${encodeURIComponent(audience)}`);
 }
 
 async function submitCommunityRegistration(event, values) {
@@ -1046,11 +1029,6 @@ async function initialize() {
   if (isMemberRoute) document.body.classList.add('member-dashboard-route');
   if (typeof feather !== 'undefined') feather.replace();
   await loadPublicContent();
-  try {
-    availableProviders = await apiRequest('/api/auth/providers');
-  } catch {
-    availableProviders = { google: false, microsoft: false };
-  }
   try {
     const actor = await apiRequest('/api/auth/me');
     if (isDeveloperRoute) {
