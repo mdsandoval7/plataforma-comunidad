@@ -34,3 +34,18 @@ for (const imageDirectory of imageDirectories) {
     );
   }
 }
+
+const routePages = [
+  'admin/developer.html',
+  'admin/church-dashboard.html',
+  'dashboard.html'
+];
+
+for (const routePage of routePages) {
+  const destination = path.join(publicDirectory, routePage);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.copyFileSync(
+    path.join(sourceDirectory, 'index.html'),
+    destination
+  );
+}

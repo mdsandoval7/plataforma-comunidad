@@ -236,10 +236,7 @@ async function startAuth(provider, audience = 'leadership') {
       ? 'generalAuthMessage'
       : 'leaderAuthMessage';
   if (provider === 'google') {
-    const backendUrl = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-      ? 'http://localhost:3000'
-      : window.location.origin;
-    window.location.assign(`${backendUrl}/api/auth/google?audience=${encodeURIComponent(audience)}`);
+    window.location.assign('/api/auth/google');
     return;
   }
   try {
@@ -268,6 +265,9 @@ async function submitCommunityRegistration(event, values) {
     document.getElementById('communityLogoutButton').hidden = false;
     closeModal('modal-acc-public');
     await showMemberDashboard(actor);
+    if (actor.welcomeEmailSent === false) {
+      showMessage('prayerRequestMessage', 'Tu cuenta se creó, pero no pudimos enviar el correo de bienvenida. Contacta al equipo de la iglesia.', true);
+    }
   } catch (error) {
     showMessage('generalAuthMessage', error.message, true);
   }
@@ -1037,7 +1037,8 @@ function attachEventHandlers() {
 async function initialize() {
   attachEventHandlers();
   const currentPath = window.location.pathname;
-  const isDeveloperRoute = currentPath === '/admin/developer-panel.html' || currentPath.startsWith('/admin/developer/');
+  const isDeveloperRoute = ['/admin/developer.html', '/admin/developer-panel.html'].includes(currentPath)
+    || currentPath.startsWith('/admin/developer/');
   const isChurchRoute = currentPath === '/admin/church-dashboard.html' || currentPath.startsWith('/admin/church/');
   const isMemberRoute = currentPath === '/dashboard.html';
   if (isDeveloperRoute) document.body.classList.add('developer-dashboard-route');
@@ -1068,6 +1069,11 @@ async function initialize() {
       window.location.replace('/admin/church-dashboard.html');
     } else {
       await setupDashboard(actor);
+    }
+    if (new URLSearchParams(window.location.search).get('welcomeEmail') === 'failed') {
+      const messageId = isMemberRoute ? 'prayerRequestMessage' : 'dashboardMessage';
+      showMessage(messageId, 'Tu cuenta se creó, pero no pudimos enviar el correo de bienvenida. Contacta al equipo de la iglesia.', true);
+      window.history.replaceState({}, '', `${window.location.pathname}${window.location.hash}`);
     }
   } catch (error) {
     if ([401, 403].includes(error.status) && (isDeveloperRoute || isChurchRoute || isMemberRoute)) {

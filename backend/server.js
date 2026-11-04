@@ -6,6 +6,7 @@ const path = require('node:path');
 const express = require('express');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const nodemailer = require('nodemailer');
 const { PrismaClient } = require('@prisma/client');
 
 const app = express();
@@ -251,6 +252,78 @@ function canAccessAudience(access, audience) {
   return true;
 }
 
+function getOAuthRedirectPath(user, access) {
+  if (access?.role === 'superDeveloper') return '/admin/developer.html';
+  if (access?.role === 'developer') return '/admin/developer-panel.html';
+  if (['PASTOR', 'LIDER'].includes(user.role) || ['pastor', 'leader'].includes(access?.role)) {
+    return '/admin/church-dashboard.html';
+  }
+  if (access?.role === 'admin') return '/#adminDashboard';
+  return '/dashboard.html';
+}
+
+function getWelcomeEmailFailureRedirect(destination) {
+  const redirect = new URL(destination, baseUrl);
+  redirect.searchParams.set('welcomeEmail', 'failed');
+  return `${redirect.pathname}${redirect.search}${redirect.hash}`;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[character]);
+}
+
+async function sendWelcomeEmail(user) {
+  const host = process.env.SMTP_HOST;
+  const from = process.env.SMTP_FROM;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secure = process.env.SMTP_SECURE
+    ? process.env.SMTP_SECURE.toLowerCase() === 'true'
+    : port === 465;
+
+  if (!host || !from || !Number.isInteger(port) || port < 1 || port > 65535) {
+    console.error('Welcome email not sent: configure valid SMTP_HOST, SMTP_PORT, and SMTP_FROM.');
+    return false;
+  }
+  if (process.env.SMTP_SECURE && !['true', 'false'].includes(process.env.SMTP_SECURE.toLowerCase())) {
+    console.error('Welcome email not sent: SMTP_SECURE must be true or false.');
+    return false;
+  }
+  if (Boolean(process.env.SMTP_USER) !== Boolean(process.env.SMTP_PASS)) {
+    console.error('Welcome email not sent: configure both SMTP_USER and SMTP_PASS, or neither.');
+    return false;
+  }
+
+  const safeName = escapeHtml(user.name);
+  const text = `¡Bienvenido/a al Centro Cristiano ICAEP, ${user.name}!\n\nNos alegra que formes parte de nuestra comunidad. Ya puedes iniciar sesión para conocer las actividades, devocionales y recursos disponibles.\n\nCentro Cristiano ICAEP`;
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      ...(process.env.SMTP_USER ? {
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      } : {})
+    });
+    await transporter.sendMail({
+      from,
+      to: user.email,
+      subject: 'Bienvenido/a al Centro Cristiano ICAEP',
+      text,
+      html: `<!doctype html><html lang="es"><body style="margin:0;background:#f3f5f8;font-family:Arial,sans-serif;color:#243247"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#fff;border-radius:12px;overflow:hidden"><tr><td style="background:#12345a;padding:28px 32px;color:#fff"><p style="margin:0;font-size:12px;letter-spacing:1px">CENTRO CRISTIANO ICAEP</p><h1 style="margin:12px 0 0;font-size:24px">¡Te damos la bienvenida!</h1></td></tr><tr><td style="padding:32px"><p style="font-size:16px;line-height:1.6">Hola, <strong>${safeName}</strong>:</p><p style="font-size:15px;line-height:1.7">Nos alegra que formes parte de nuestra comunidad. Ya puedes iniciar sesión para conocer las actividades, devocionales y recursos disponibles.</p><p style="font-size:15px;line-height:1.7">Que este espacio sea de encuentro, crecimiento y bendición para ti.</p><p style="margin:28px 0 0;font-size:14px;color:#53657c">Con aprecio,<br><strong>Centro Cristiano ICAEP</strong></p></td></tr></table><p style="font-size:12px;color:#718096;margin:16px 0 0">Este mensaje se envió porque se creó una cuenta en nuestra plataforma.</p></td></tr></table></body></html>`
+    });
+    return true;
+  } catch (error) {
+    console.error('Welcome email delivery failed:', error.code || error.name || 'unknown error');
+    return false;
+  }
+}
+
 function readCookie(req, name) {
   const cookieHeader = req.headers.cookie || '';
   for (const part of cookieHeader.split(';')) {
@@ -390,6 +463,7 @@ function configureGooglePassport() {
         },
         select: { id: true, name: true, email: true, role: true, status: true, isActive: true }
       });
+      if (!existingUser) user.welcomeEmailSent = await sendWelcomeEmail(user);
       done(null, user);
     } catch (error) {
       done(error);
@@ -679,6 +753,7 @@ app.post('/api/auth/register', requireSameOrigin, authRateLimit, async (req, res
       });
       return createdUser;
     });
+    const welcomeEmailSent = await sendWelcomeEmail(user);
 
     res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
     res.status(201).json({
@@ -687,7 +762,8 @@ app.post('/api/auth/register', requireSameOrigin, authRateLimit, async (req, res
       role: 'community',
       ministries: [],
       churchCodes: [],
-      churches: []
+      churches: [],
+      welcomeEmailSent
     });
   } catch (error) {
     if (error.code === 'P2002') {
@@ -769,7 +845,7 @@ app.get('/api/auth/google', authRateLimit, (req, res, next) => {
   }
   const audience = ['admin', 'community', 'leadership'].includes(req.query.audience)
     ? req.query.audience
-    : 'leadership';
+    : 'community';
   const state = crypto.randomBytes(32).toString('base64url');
   res.cookie(oauthCookieName, signState({
     provider: 'google',
@@ -820,16 +896,8 @@ app.get('/api/auth/google/callback', authRateLimit, (req, res, next) => {
       });
       res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
       const access = getOAuthAccess(user);
-      if (['superDeveloper', 'developer'].includes(access?.role)) {
-        return res.redirect('/admin/developer-panel.html');
-      }
-      if (['PASTOR', 'LIDER'].includes(user.role) || ['pastor', 'leader'].includes(access?.role)) {
-        return res.redirect('/admin/church-dashboard.html');
-      }
-      if (access?.role === 'admin') {
-        return res.redirect('/#adminDashboard');
-      }
-      res.redirect('/dashboard.html');
+      const destination = getOAuthRedirectPath(user, access);
+      res.redirect(user.welcomeEmailSent === false ? getWelcomeEmailFailureRedirect(destination) : destination);
     } catch (sessionError) {
       next(sessionError);
     }
@@ -913,6 +981,7 @@ app.get('/api/auth/:provider/callback', authRateLimit, async (req, res, next) =>
       },
       select: { id: true, name: true, email: true, role: true, status: true, isActive: true }
     });
+    const welcomeEmailSent = existingUser ? null : await sendWelcomeEmail(user);
     if (!user.isActive || user.status !== 'ACTIVE') {
       return res.status(403).send('La cuenta está inactiva. Contacta al administrador.');
     }
@@ -928,14 +997,8 @@ app.get('/api/auth/:provider/callback', authRateLimit, async (req, res, next) =>
       }
     });
     res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
-    if (['superDeveloper', 'developer'].includes(access.role)) {
-      return res.redirect('/admin/developer-panel.html');
-    }
-    if (['PASTOR', 'LIDER'].includes(user.role) || ['pastor', 'leader'].includes(access.role)) {
-      return res.redirect('/admin/church-dashboard.html');
-    }
-    if (access.role === 'admin') return res.redirect('/#adminDashboard');
-    res.redirect('/dashboard.html');
+    const destination = getOAuthRedirectPath(user, access);
+    res.redirect(welcomeEmailSent === false ? getWelcomeEmailFailureRedirect(destination) : destination);
   } catch (error) {
     next(error);
   }
@@ -1056,7 +1119,7 @@ app.delete('/api/developer/developers/:id', requireSameOrigin, authenticate, req
   }
 });
 
-app.get('/admin/developer-panel.html', authenticate, requireDeveloper, sendProtectedInterface);
+app.get(['/admin/developer.html', '/admin/developer-panel.html'], authenticate, requireDeveloper, sendProtectedInterface);
 app.use('/admin/developer', authenticate, requireDeveloper, sendProtectedInterface);
 app.get('/admin/church-dashboard.html', authenticate, requireChurchLeadership, sendProtectedInterface);
 app.use('/admin/church', authenticate, requireChurchLeadership, sendProtectedInterface);
@@ -1362,10 +1425,11 @@ if (require.main === module) {
   });
 }
 
-module.exports = {
+module.exports = Object.assign(app, {
   app,
   canAccessAudience,
   getAccess,
+  getOAuthRedirectPath,
   getOAuthAccess,
   getPasswordAccess,
   hashPassword,
@@ -1383,4 +1447,4 @@ module.exports = {
   validateReport,
   validateTestimonialRating,
   verifyPassword
-};
+});

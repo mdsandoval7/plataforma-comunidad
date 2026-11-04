@@ -4,6 +4,7 @@ const {
   app,
   canAccessAudience,
   getAccess,
+  getOAuthRedirectPath,
   getOAuthAccess,
   getPasswordAccess,
   hashPassword,
@@ -191,6 +192,29 @@ test('developer OAuth access respects stored roles and verified owner assignment
   assert.equal(canAccessAudience(null, 'community'), false);
 });
 
+test('OAuth redirects follow the authenticated account role', () => {
+  assert.equal(getOAuthRedirectPath(
+    { role: 'SUPER_DEVELOPER' },
+    { role: 'superDeveloper' }
+  ), '/admin/developer.html');
+  assert.equal(getOAuthRedirectPath(
+    { role: 'DEVELOPER' },
+    { role: 'developer' }
+  ), '/admin/developer-panel.html');
+  assert.equal(getOAuthRedirectPath(
+    { role: 'PASTOR' },
+    { role: 'pastor' }
+  ), '/admin/church-dashboard.html');
+  assert.equal(getOAuthRedirectPath(
+    { role: 'LIDER' },
+    { role: 'leader' }
+  ), '/admin/church-dashboard.html');
+  assert.equal(getOAuthRedirectPath(
+    { role: 'MIEMBRO' },
+    { role: 'community' }
+  ), '/dashboard.html');
+});
+
 test('protected role middleware rejects users outside the allowed role', () => {
   const response = {
     statusCode: 200,
@@ -234,6 +258,7 @@ test('admin panel routes require an active session before serving the interface'
   });
 
   for (const route of [
+    '/admin/developer.html',
     '/admin/developer-panel.html',
     '/admin/developer/settings',
     '/admin/church-dashboard.html',
