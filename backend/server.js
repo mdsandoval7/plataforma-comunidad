@@ -381,10 +381,26 @@ function readCookie(req, name) {
     const separator = part.indexOf('=');
     if (separator < 0) continue;
     if (part.slice(0, separator).trim() === name) {
-      return decodeURIComponent(part.slice(separator + 1).trim());
+      try {
+        return decodeURIComponent(part.slice(separator + 1).trim());
+      } catch {
+        return null;
+      }
     }
   }
   return null;
+}
+
+function logAuthError(stage, error) {
+  const details = error instanceof Error
+    ? {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    }
+    : { message: String(error) };
+  console.error(`[auth:${stage}]`, details);
 }
 
 function sessionCookieOptions(maxAge, secure = secureCookies) {
@@ -510,6 +526,7 @@ function configureGooglePassport() {
     try {
       const identity = getVerifiedGoogleIdentity(profile);
       if (!identity) {
+        console.warn('[auth:google-profile] Google returned no verified email address.');
         return done(null, false, { message: 'Google no confirmó un correo electrónico válido.' });
       }
       const { email, name } = identity;
@@ -553,6 +570,7 @@ function configureGooglePassport() {
       if (!existingUser) user.welcomeEmailSent = await sendWelcomeEmail(user);
       done(null, user);
     } catch (error) {
+      logAuthError('google-strategy', error);
       done(error);
     }
   }));
@@ -800,6 +818,17 @@ app.get('/api/auth/providers', (req, res) => {
   });
 });
 
+app.get('/api/health/db', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return res.status(200).json({ status: 'ok', database: 'connected' });
+  } catch (error) {
+    logAuthError('database-health', error);
+    return res.status(503).json({ status: 'error', database: 'unavailable' });
+  }
+});
+
 app.post('/api/auth/register', requireSameOrigin, authRateLimit, async (req, res, next) => {
   let registration;
   try {
@@ -951,47 +980,62 @@ app.get('/api/auth/google', authRateLimit, (req, res, next) => {
 });
 
 app.get('/api/auth/google/callback', authRateLimit, (req, res, next) => {
-  const state = verifyState(readCookie(req, oauthCookieName));
-  res.clearCookie(oauthCookieName, { ...sessionCookieOptions(0), path: '/api/auth' });
-  if (!googlePassportConfigured || !state || state.provider !== 'google' || state.state !== req.query.state) {
-    return res.status(400).send('La solicitud de acceso expiró o no es válida. Intenta de nuevo.');
-  }
-  if (req.query.error || typeof req.query.code !== 'string') {
-    return res.status(401).send('No fue posible completar el acceso con Google.');
-  }
-
-  passport.authenticate('google', { session: false }, async (error, user, info) => {
-    if (error) return next(error);
-    if (!user) {
-      return res.status(403).send(info?.message || 'No fue posible autenticar la cuenta de Google.');
+  try {
+    const state = verifyState(readCookie(req, oauthCookieName));
+    res.clearCookie(oauthCookieName, { ...sessionCookieOptions(0), path: '/api/auth' });
+    if (!googlePassportConfigured || !state || state.provider !== 'google' || state.state !== req.query.state) {
+      return res.status(400).send('La solicitud de acceso expiró o no es válida. Intenta de nuevo.');
     }
-    if (!user.isActive || user.status !== 'ACTIVE') {
-      return res.status(403).send('La cuenta está inactiva. Contacta al administrador.');
-    }
-    const access = getOAuthAccess(user);
-    if (!['superDeveloper', 'pastor', 'leader'].includes(access?.role)) {
-      return res.status(403).send('Tu correo no está autorizado. El acceso con Google es solo para pastores, líderes y el SUPER_DEVELOPER.');
+    if (req.query.error || typeof req.query.code !== 'string') {
+      return res.status(401).send('No fue posible completar el acceso con Google.');
     }
 
-    try {
-      const token = crypto.randomBytes(32).toString('base64url');
-      await prisma.session.create({
-        data: {
-          userId: user.id,
-          authMethod: 'OAUTH',
-          tokenHash: crypto.createHash('sha256').update(token).digest('hex'),
-          ip: req.ip,
-          userAgent: req.get('user-agent')?.slice(0, 500) || null,
-          expiresAt: new Date(Date.now() + sessionLifetimeMs)
+    return passport.authenticate('google', { session: false }, async (error, user, info) => {
+      if (error) {
+        logAuthError('google-passport-callback', error);
+        return next(error);
+      }
+      if (!user) {
+        return res.status(403).send(info?.message || 'No fue posible autenticar la cuenta de Google.');
+      }
+
+      try {
+        if (!user.isActive || user.status !== 'ACTIVE') {
+          return res.status(403).send('La cuenta está inactiva. Contacta al administrador.');
         }
-      });
-      res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
-      const destination = getOAuthRedirectPath(user, access);
-      res.redirect(user.welcomeEmailSent === false ? getWelcomeEmailFailureRedirect(destination) : destination);
-    } catch (sessionError) {
-      next(sessionError);
-    }
-  })(req, res, next);
+        const access = getOAuthAccess(user);
+        if (!['superDeveloper', 'pastor', 'leader'].includes(access?.role)) {
+          return res.status(403).send('Tu correo no está autorizado. El acceso con Google es solo para pastores, líderes y el SUPER_DEVELOPER.');
+        }
+
+        const token = crypto.randomBytes(32).toString('base64url');
+        try {
+          await prisma.session.create({
+            data: {
+              userId: user.id,
+              authMethod: 'OAUTH',
+              tokenHash: crypto.createHash('sha256').update(token).digest('hex'),
+              ip: req.ip,
+              userAgent: req.get('user-agent')?.slice(0, 500) || null,
+              expiresAt: new Date(Date.now() + sessionLifetimeMs)
+            }
+          });
+        } catch (error) {
+          logAuthError('google-session-create', error);
+          return next(error);
+        }
+        res.cookie(sessionCookieName, token, sessionCookieOptions(sessionLifetimeMs));
+        const destination = getOAuthRedirectPath(user, access);
+        return res.redirect(user.welcomeEmailSent === false ? getWelcomeEmailFailureRedirect(destination) : destination);
+      } catch (error) {
+        logAuthError('google-callback-finalize', error);
+        return next(error);
+      }
+    })(req, res, next);
+  } catch (error) {
+    logAuthError('google-callback', error);
+    return next(error);
+  }
 });
 
 app.get('/api/auth/:provider', authRateLimit, (req, res) => {
@@ -1498,7 +1542,7 @@ app.patch('/api/leadership/testimonials/:id', requireSameOrigin, authenticate, r
 app.use(express.static(frontendPath, { extensions: ['html'] }));
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
-  console.error('Request failed:', error.name, error.code || error.status || 'unhandled');
+  logAuthError(`request:${req.method}:${req.path}`, error);
   const status = Number.isInteger(error.status) ? error.status : 500;
   res.status(status).json({
     error: status === 500 ? 'Ocurrió un error interno. Intenta de nuevo más tarde.' : error.message
@@ -1543,5 +1587,7 @@ module.exports = Object.assign(app, {
   resolveBaseUrl,
   isConfiguredSessionSecret,
   sessionCookieOptions,
-  getVerifiedGoogleIdentity
+  getVerifiedGoogleIdentity,
+  readCookie,
+  logAuthError
 });

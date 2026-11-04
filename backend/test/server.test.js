@@ -22,6 +22,8 @@ const {
   requireSuperDeveloper,
   resolveBaseUrl,
   sessionCookieOptions,
+  readCookie,
+  logAuthError,
   validateLogin,
   validateMetrics,
   validatePrayerRequest,
@@ -48,6 +50,28 @@ test('testimonial submission URL is handled by the Express API', async t => {
   });
   assert.equal(response.status, 403);
   assert.deepEqual(await response.json(), { error: 'Origen no autorizado.' });
+});
+
+test('database health route reports connection status without exposing details', async t => {
+  const server = app.listen(0, '127.0.0.1');
+  t.after(() => new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+  }));
+  await new Promise((resolve, reject) => {
+    server.once('listening', resolve);
+    server.once('error', reject);
+  });
+
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/health/db`);
+  const body = await response.json();
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  if (response.status === 200) {
+    assert.deepEqual(body, { status: 'ok', database: 'connected' });
+  } else {
+    assert.equal(response.status, 503);
+    assert.deepEqual(body, { status: 'error', database: 'unavailable' });
+    assert.equal('message' in body, false);
+  }
 });
 
 test('leader access is exact and restricted to the configured ministry', () => {
@@ -148,6 +172,51 @@ test('Google profile extraction requires a verified and valid email', () => {
     _json: { email: 'not-an-email', email_verified: true }
   }), null);
   assert.equal(getVerifiedGoogleIdentity(null), null);
+});
+
+test('OAuth cookie parsing safely handles missing and malformed values', () => {
+  assert.equal(readCookie({ headers: {} }, 'ccicaep_oauth'), null);
+  assert.equal(readCookie({
+    headers: { cookie: 'other=value; ccicaep_oauth=%' }
+  }, 'ccicaep_oauth'), null);
+  assert.equal(readCookie({
+    headers: { cookie: 'ccicaep_oauth=valid%2Evalue' }
+  }, 'ccicaep_oauth'), 'valid.value');
+});
+
+test('Google callback rejects malformed OAuth cookies without an internal error', async t => {
+  const server = app.listen(0, '127.0.0.1');
+  t.after(() => new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+  }));
+  await new Promise((resolve, reject) => {
+    server.once('listening', resolve);
+    server.once('error', reject);
+  });
+
+  const response = await fetch(
+    `http://127.0.0.1:${server.address().port}/api/auth/google/callback?state=invalid`,
+    { headers: { Cookie: 'ccicaep_oauth=%' } }
+  );
+  assert.equal(response.status, 400);
+  assert.match(await response.text(), /solicitud de acceso expiró/);
+});
+
+test('authentication errors include their stage and exact stack in server logs', () => {
+  const originalConsoleError = console.error;
+  let log;
+  console.error = (...args) => { log = args; };
+  try {
+    const error = new Error('Database connection failed');
+    error.code = 'P1001';
+    logAuthError('google-session-create', error);
+    assert.equal(log[0], '[auth:google-session-create]');
+    assert.equal(log[1].message, 'Database connection failed');
+    assert.equal(log[1].code, 'P1001');
+    assert.equal(log[1].stack, error.stack);
+  } finally {
+    console.error = originalConsoleError;
+  }
 });
 
 test('Google login is limited to authorized leadership and the super developer', () => {
