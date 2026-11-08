@@ -284,7 +284,7 @@ function getOAuthAccess(user) {
   return getAccess(email);
 }
 
-function getAuthorizedGoogleRole(email, existingUser) {
+function getAuthorizedGoogleRole(email, existingUser, audience = 'leadership') {
   const normalizedEmail = email.toLowerCase();
   if (normalizedEmail === superDeveloperEmail) return 'SUPER_DEVELOPER';
   if (['PASTOR', 'LIDER'].includes(existingUser?.role)) return existingUser.role;
@@ -293,6 +293,7 @@ function getAuthorizedGoogleRole(email, existingUser) {
   const configuredAccess = getAccess(normalizedEmail);
   if (configuredAccess.role === 'pastor') return 'PASTOR';
   if (configuredAccess.role === 'leader') return 'LIDER';
+  if (audience === 'community') return 'MIEMBRO';
   return null;
 }
 
@@ -461,7 +462,7 @@ function providerConfig(provider, env = process.env, applicationBaseUrl = baseUr
     const clientSecret = env.MICROSOFT_CLIENT_SECRET;
     const tenantId = env.MICROSOFT_TENANT_ID || 'common';
     const authority = `https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0`;
-    return clientId && clientSecret ? {
+    return isConfiguredOAuthCredential(clientId) && isConfiguredOAuthCredential(clientSecret) ? {
       clientId,
       clientSecret,
       callbackUrl,
@@ -541,9 +542,9 @@ function configureGooglePassport() {
       if (existingUser && (!existingUser.isActive || existingUser.status !== 'ACTIVE')) {
         return done(null, false, { message: 'La cuenta está inactiva. Contacta al administrador.' });
       }
-      const authorizedRole = getAuthorizedGoogleRole(email, existingUser);
+      const authorizedRole = getAuthorizedGoogleRole(email, existingUser, state.audience);
       if (!authorizedRole) {
-        return done(null, false, { message: 'Tu correo no está autorizado. El acceso con Google es solo para pastores, líderes y el SUPER_DEVELOPER.' });
+        return done(null, false, { message: 'Tu correo no está autorizado para este acceso con Google.' });
       }
       const account = { email, role: authorizedRole };
       const access = getOAuthAccess(account);
@@ -812,9 +813,10 @@ async function fetchProviderIdentity(provider, config, code, codeVerifier) {
 }
 
 app.get('/api/auth/providers', (req, res) => {
+  const sessionConfigured = isConfiguredSessionSecret(process.env.SESSION_SECRET);
   res.json({
-    google: Boolean(providerConfig('google')),
-    microsoft: Boolean(providerConfig('microsoft'))
+    google: googlePassportConfigured && sessionConfigured,
+    microsoft: Boolean(providerConfig('microsoft')) && sessionConfigured
   });
 });
 
@@ -1004,8 +1006,8 @@ app.get('/api/auth/google/callback', authRateLimit, (req, res, next) => {
           return res.status(403).send('La cuenta está inactiva. Contacta al administrador.');
         }
         const access = getOAuthAccess(user);
-        if (!['superDeveloper', 'pastor', 'leader'].includes(access?.role)) {
-          return res.status(403).send('Tu correo no está autorizado. El acceso con Google es solo para pastores, líderes y el SUPER_DEVELOPER.');
+        if (!canAccessAudience(access, state.audience)) {
+          return res.status(403).send('El correo autenticado no está autorizado para este acceso con Google.');
         }
 
         const token = crypto.randomBytes(32).toString('base64url');

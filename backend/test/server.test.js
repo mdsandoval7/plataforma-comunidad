@@ -202,6 +202,23 @@ test('Google callback rejects malformed OAuth cookies without an internal error'
   assert.match(await response.text(), /solicitud de acceso expiró/);
 });
 
+test('OAuth provider status reports readiness for the login page', async t => {
+  const server = app.listen(0, '127.0.0.1');
+  t.after(() => new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+  }));
+  await new Promise((resolve, reject) => {
+    server.once('listening', resolve);
+    server.once('error', reject);
+  });
+
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/auth/providers`);
+  const providers = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(typeof providers.google, 'boolean');
+  assert.equal(typeof providers.microsoft, 'boolean');
+});
+
 test('authentication errors include their stage and exact stack in server logs', () => {
   const originalConsoleError = console.error;
   let log;
@@ -219,7 +236,7 @@ test('authentication errors include their stage and exact stack in server logs',
   }
 });
 
-test('Google login is limited to authorized leadership and the super developer', () => {
+test('Google login supports community accounts and restricts leadership to authorized emails', () => {
   const previousPastors = process.env.PASTOR_EMAILS;
   const previousLeaders = process.env.LEADER_ACCESS;
   const previousChurches = process.env.CHURCHES;
@@ -233,6 +250,12 @@ test('Google login is limited to authorized leadership and the super developer',
       email: 'pastor@example.org',
       role: 'MIEMBRO'
     }), 'PASTOR');
+    assert.equal(getAuthorizedGoogleRole('member@example.org', null, 'community'), 'MIEMBRO');
+    assert.equal(getAuthorizedGoogleRole('member@example.org', {
+      email: 'member@example.org',
+      role: 'MIEMBRO'
+    }, 'community'), 'MIEMBRO');
+    assert.equal(getAuthorizedGoogleRole('member@example.org', null, 'leadership'), null);
     assert.equal(getAuthorizedGoogleRole('existing@example.org', {
       email: 'existing@example.org',
       role: 'PASTOR'
@@ -246,6 +269,10 @@ test('Google login is limited to authorized leadership and the super developer',
       email: 'member@example.org',
       role: 'MIEMBRO'
     }), null);
+    assert.equal(getAuthorizedGoogleRole('developer@example.org', {
+      email: 'developer@example.org',
+      role: 'DEVELOPER'
+    }, 'community'), null);
     assert.equal(getAuthorizedGoogleRole('developer@example.org', {
       email: 'developer@example.org',
       role: 'DEVELOPER'
@@ -294,6 +321,18 @@ test('OAuth callback uses Vercel production URL and configured Google credential
   assert.equal(google.clientId, 'test-google-client-id');
   assert.equal(google.clientSecret, 'test-google-client-secret');
   assert.equal(google.callbackUrl, 'https://icaepcamelot.vercel.app/api/auth/google/callback');
+
+  const microsoft = providerConfig('microsoft', {
+    MICROSOFT_CLIENT_ID: 'test-microsoft-client-id',
+    MICROSOFT_CLIENT_SECRET: 'test-microsoft-client-secret'
+  }, productionUrl);
+  assert.equal(microsoft.clientId, 'test-microsoft-client-id');
+  assert.equal(microsoft.callbackUrl, 'https://icaepcamelot.vercel.app/api/auth/microsoft/callback');
+  assert.equal(microsoft.authorizationUrl, 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
+  assert.equal(providerConfig('microsoft', {
+    MICROSOFT_CLIENT_ID: 'PEGA_AQUI_EL_CLIENT_ID',
+    MICROSOFT_CLIENT_SECRET: 'test-microsoft-client-secret'
+  }, productionUrl), null);
 
   assert.equal(resolveBaseUrl({ VERCEL_URL: 'icaepcamelot-preview.vercel.app' }), 'https://icaepcamelot-preview.vercel.app');
   assert.equal(resolveBaseUrl({}), 'http://localhost:3000');

@@ -187,6 +187,32 @@ async function loadPublicContent() {
   }
 }
 
+async function loadAuthProviders() {
+  const buttons = [...document.querySelectorAll('[data-auth-provider]')];
+  try {
+    const providers = await apiRequest('/api/auth/providers');
+    for (const button of buttons) {
+      button.disabled = providers[button.dataset.authProvider] !== true;
+    }
+    const availableProviders = ['google', 'microsoft'].filter(provider => providers[provider] === true);
+    const availableLabel = availableProviders
+      .map(provider => provider === 'google' ? 'Google' : 'Microsoft')
+      .join(' y ');
+    const communityStatus = document.getElementById('communityProviderStatus');
+    const leadershipStatus = document.getElementById('leadershipProviderStatus');
+    communityStatus.textContent = availableProviders.length
+      ? `Acceso disponible con ${availableLabel}.`
+      : 'El acceso con Google/Microsoft aún no está configurado. Puedes registrarte o ingresar con correo y contraseña.';
+    leadershipStatus.textContent = availableProviders.length
+      ? `Acceso disponible con ${availableLabel}. Usa el correo que el administrador autorizó para tu rol de pastor o líder.`
+      : 'El acceso con Google/Microsoft aún no está configurado. El ingreso por contraseña sigue disponible.';
+  } catch (error) {
+    for (const button of buttons) button.disabled = true;
+    showMessage('communityProviderStatus', `No se pudo verificar el acceso con Google/Microsoft: ${error.message}`, true);
+    showMessage('leadershipProviderStatus', `No se pudo verificar el acceso con Google/Microsoft: ${error.message}`, true);
+  }
+}
+
 async function submitTestimonial(event) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -231,7 +257,7 @@ function closeModal(modalId) {
 
 async function startAuth(provider, audience = 'leadership') {
   if (provider === 'google') {
-    window.location.assign('/api/auth/google');
+    window.location.assign(`/api/auth/google?audience=${encodeURIComponent(audience)}`);
     return;
   }
   window.location.assign(`/api/auth/${provider}?audience=${encodeURIComponent(audience)}`);
@@ -1030,6 +1056,7 @@ async function initialize() {
   if (isMemberRoute) document.body.classList.add('member-dashboard-route');
   if (typeof feather !== 'undefined') feather.replace();
   await loadPublicContent();
+  await loadAuthProviders();
   try {
     const actor = await apiRequest('/api/auth/me');
     if (isDeveloperRoute) {
